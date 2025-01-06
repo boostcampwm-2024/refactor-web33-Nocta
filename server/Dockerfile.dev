@@ -1,0 +1,20 @@
+# 1. Node.js 20 기반 이미지
+FROM node:20
+WORKDIR /app
+
+# 2. 모노레포 루트에서 필요한 파일 복사
+COPY ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./
+COPY ./server/package.json ./server/
+
+# 3. pnpm 설치 및 의존성 설치
+RUN npm install -g pnpm
+RUN pnpm install
+
+# 4. 소스 코드 복사
+COPY . .
+
+# 5. NestJS 개발 서버 실행용 포트 노출
+EXPOSE 3000
+
+# 6. 개발 모드 실행
+CMD ["pnpm", "--filter", "server", "run", "start:dev"]

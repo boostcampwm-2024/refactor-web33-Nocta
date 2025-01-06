@@ -1,0 +1,4 @@
+packages:
+  - "@noctaCrdt"
+  - "client"
+  - "server"

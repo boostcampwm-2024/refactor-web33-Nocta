@@ -1,0 +1,50 @@
+name: Lint and Unit Test
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  lint_and_unit_test:
+    name: Lint and Unit Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: true
+
+      # Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      # Run build
+      - name: Install dependencies and build packages
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @noctaCrdt build
+          pnpm --filter server build
+
+      # Run lint
+      - name: Run Lint
+        run: pnpm eslint .
+
+      # Run Unit tests
+      - name: Run Unit Tests
+        run: pnpm test
+        env:
+          NODE_ENV: development
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}

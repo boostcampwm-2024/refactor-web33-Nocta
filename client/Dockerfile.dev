@@ -1,0 +1,20 @@
+# 1. Node.js 20 기반 이미지
+FROM node:20
+WORKDIR /app
+
+# 2. 모노레포 루트에서 필요한 파일 복사
+COPY ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./
+COPY ./client/package.json ./client/
+
+# 3. pnpm 설치 및 의존성 설치
+RUN npm install -g pnpm
+RUN pnpm install
+
+# 4. 소스 코드 복사
+COPY . .
+
+# 5. 애플리케이션 포트 노출
+EXPOSE 5173
+
+# 6. Vite 개발 서버 실행
+CMD ["pnpm", "--filter", "client", "run", "dev"]

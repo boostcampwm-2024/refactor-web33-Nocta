@@ -1,0 +1,31 @@
+name: Deploy on Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy on Server
+    runs-on: [self-hosted, boost-was] # 라벨에 해당하는 runner로 실행
+
+    steps:
+      # 1. 레포지토리 클론
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Docker Compose로 서비스 빌드 및 재시작
+      - name: Build and Deploy Docker Images
+        env:
+          NODE_ENV: production
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: |
+          docker-compose up -d --build
+
+      # 3. Clean up Old Images
+      - name: Remove Dangling Images
+        run: docker image prune -f

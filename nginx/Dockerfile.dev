@@ -1,0 +1,9 @@
+FROM nginx:alpine
+WORKDIR /usr/share/nginx/html
+
+# Nginx 기본 설정 복사
+COPY ./nginx/default.dev.conf /etc/nginx/conf.d/default.conf
+
+# 정적 파일을 호스트에서 복사 (개발 환경에서 핫 리로딩 사용 가능)
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

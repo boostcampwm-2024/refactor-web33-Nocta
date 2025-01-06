@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "isolatedModules": true,
+    "module": "CommonJS",
+    "esModuleInterop": true,
+    "allowJs": true, // 추가
+    "moduleResolution": "node", // 추가
+    "target": "ES2021" // 추가
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

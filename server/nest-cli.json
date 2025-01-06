@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "tsconfig.json"
+  },
+  "projects": {
+    "crdt": {
+      "type": "library",
+      "root": "../@noctaCrdt",
+      "entryFile": "Crdt",
+      "sourceRoot": "../@noctaCrdt",
+      "compilerOptions": {
+        "tsConfigPath": "../@noctaCrdt/tsconfig.json"
+      }
+    }
+  }
+}

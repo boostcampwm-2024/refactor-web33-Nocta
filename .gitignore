@@ -1,0 +1,12 @@
+/node_modules
+**/node_modules
+
+*/dist
+/build
+.DS_Store
+.env
+
+tsconfig.tsbuildinfo
+
+# Jest globalConfig file
+../globalConfig.json

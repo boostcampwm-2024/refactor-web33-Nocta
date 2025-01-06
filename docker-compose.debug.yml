@@ -1,0 +1,39 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile.dev
+    volumes:
+      - ./client/dist:/app/client/dist
+    ports:
+      - "5173:5173" # React 개발 서버 포트
+    environment:
+      - NODE_ENV=development
+    command: pnpm --filter client run dev
+
+  backend:
+    build:
+      context: .
+      dockerfile: ./server/Dockerfile.dev
+    ports:
+      - "3000:3000" # NestJS 개발 서버 포트
+      - "9229:9229" # Node.js 디버깅 포트
+    environment:
+      - MONGO_URI=mongodb://localhost:27017/boost
+      - NODE_ENV=development
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile.dev
+    ports:
+      - "80:80"
+    volumes:
+      - ./client/dist:/usr/share/nginx/html
+    depends_on:
+      - frontend
+      - backend
+
+networks:
+  app-network:
+    driver: bridge

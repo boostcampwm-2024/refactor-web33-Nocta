@@ -1,0 +1,37 @@
+{
+  "extends": "../tsconfig.base.json",
+  "references": [{ "path": "../@noctaCrdt" }],
+  "compilerOptions": {
+    "module": "ESNext",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+
+    "strict": false,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
+    "paths": {
+      "@noctaCrdt": ["../@noctaCrdt/dist"],
+      "@noctaCrdt/*": ["../@noctaCrdt/dist/*"]
+    },
+    "forceConsistentCasingInFileNames": false,
+    "noFallthroughCasesInSwitch": false,
+
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+
+    "allowJs": true
+  },
+  "include": ["src/**/*", "test/**/*", "schemas"],
+  "exclude": ["node_modules", "dist"]
+}
