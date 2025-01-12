@@ -79,6 +79,7 @@ export const Page = ({
         <div className={pageHeader} onPointerDown={pageDrag} onClick={handlePageClick}>
           <PageTitle title={title} icon={icon} />
           <PageControlButton
+            testKey={testKey.split("-")[1]}
             isMaximized={isMaximized}
             onPageClose={() => handlePageClose(id)}
             onPageMaximize={pageMaximize}
