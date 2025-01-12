@@ -8,6 +8,8 @@ const onBoarding = async (page: Page) => {
   await page.click(".hover\\:bg-c_purple\\.600");
 };
 
+test.describe.configure({ mode: "serial" });
+
 test.describe("페이지 테스트", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
@@ -24,15 +26,12 @@ test.describe("페이지 테스트", () => {
     for (let i = pageCount - 1; i >= 0; i--) {
       // 먼저 페이지 아이템에 hover
       await page.getByTestId(`pageItem-${i}`).hover();
-
-      // 삭제 버튼이 보일 때까지 대기
       await page.getByTestId(`pageDeleteButton-${i}`).waitFor({ state: "visible" });
-
       // 이제 삭제 버튼 클릭
       await page.getByTestId(`pageDeleteButton-${i}`).click();
-
       // 확인 모달의 확인 버튼 클릭
       await page.getByTestId("modalPrimaryButton").click();
+      await expect(page.getByTestId(`pageItem-${i}`)).not.toBeVisible();
     }
   });
 
@@ -40,6 +39,7 @@ test.describe("페이지 테스트", () => {
     // 초기 페이지 개수
     const initialPages = await page.locator('[data-testid^="pageItem-"]').count();
     await page.getByTestId("addPageButton").click();
+    await page.waitForLoadState("networkidle");
     // 추가한 후 페이지 개수
     const newPages = await page.locator('[data-testid^="pageItem-"]').count();
 
@@ -52,6 +52,7 @@ test.describe("페이지 테스트", () => {
 
   test("페이지 열기", async ({ page }) => {
     await page.getByTestId("addPageButton").click();
+    await page.waitForLoadState("networkidle");
     const initialPages = await page.locator('[data-testid^="pageItem-"]').count();
 
     // 페이지 클릭
@@ -65,6 +66,7 @@ test.describe("페이지 테스트", () => {
   test("페이지 삭제", async ({ page }) => {
     // 페이지 추가
     await page.getByTestId("addPageButton").click();
+    await page.waitForLoadState("networkidle");
     // 초기 페이지 개수
     const initialPages = await page.locator('[data-testid^="pageItem-"]').count();
 
@@ -76,17 +78,17 @@ test.describe("페이지 테스트", () => {
     await page.getByTestId(`pageDeleteButton-${+initialPages - 1}`).click();
 
     await page.getByTestId("modalPrimaryButton").click();
+    await page.waitForLoadState("networkidle");
 
     // 삭제 후 페이지 개수
     const newPages = await page.locator('[data-testid^="pageItem-"]').count();
-    console.log("newPages", newPages);
 
     // 개수가 1 감소했는지 확인
     expect(newPages).toBe(initialPages - 1);
   });
 });
 
-test.describe("페이지 아이콘 변경", () => {
+test.describe("페이지 아이콘 테스트", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
     await onBoarding(page);
@@ -111,12 +113,14 @@ test.describe("페이지 아이콘 변경", () => {
 
       // 확인 모달의 확인 버튼 클릭
       await page.getByTestId("modalPrimaryButton").click();
+      await expect(page.getByTestId(`pageItem-${i}`)).not.toBeVisible();
     }
   });
 
   test("아이콘 변경", async ({ page }) => {
     // 페이지 추가
     await page.getByTestId("addPageButton").click();
+    await page.waitForLoadState("networkidle");
     const targetIndex = (await page.locator('[data-testid^="pageItem-"]').count()) - 1;
 
     // 페이지 아이콘 클릭
@@ -127,7 +131,6 @@ test.describe("페이지 아이콘 변경", () => {
 
     // 아이콘 변경
     const icons = await page.locator('[data-testid^="iconModalButton-"]').all();
-    console.log("icons", icons.length);
     for (const icon of icons) {
       const key = await icon.getAttribute("data-testid");
       const [, iconType] = key!.split("-");
@@ -139,5 +142,23 @@ test.describe("페이지 아이콘 변경", () => {
     }
     await page.getByTestId("iconModalCloseButton").click();
     await expect(page.getByTestId("iconModal")).not.toBeVisible();
+  });
+});
+
+test.describe("사이드바 토글 테스트", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/");
+    await onBoarding(page);
+  });
+
+  test("사이드바 토글", async ({ page }) => {
+    await expect(page.getByTestId("sidebarToggle")).toBeVisible();
+    await expect(page.getByTestId("sidebarToggle")).toBeEnabled();
+
+    await page.getByTestId("sidebarToggle").click();
+    await expect(page.getByTestId("sidebar")).toHaveCSS("width", "40px");
+
+    await page.getByTestId("sidebarToggle").click();
+    await expect(page.getByTestId("sidebar")).toHaveCSS("width", "300px");
   });
 });
