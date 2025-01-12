@@ -84,13 +84,14 @@ export const Sidebar = ({
 
   return (
     <motion.aside
+      data-testid="sidebar"
       className={sidebarContainer}
       initial="open"
       animate={isSidebarOpen ? "open" : "closed"}
       variants={sidebarVariants}
       {...sidebarOnBoardingProps}
     >
-      <div className={sidebarToggleButton} onClick={toggleSidebar}>
+      <div data-testid="sidebarToggle" className={sidebarToggleButton} onClick={toggleSidebar}>
         {isSidebarOpen ? "«" : "»"}
       </div>
       <motion.div variants={contentVariants}>
