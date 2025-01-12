@@ -180,8 +180,14 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             isError={getFieldError("password")}
           />
         </div>
-        <div className={errorWrapper}>{error && <p className={errorContainer}>{error}</p>}</div>
-        <button onClick={toggleMode} className={toggleButton}>
+        <div className={errorWrapper}>
+          {error && (
+            <p data-testid="authErrorMessage" className={errorContainer}>
+              {error}
+            </p>
+          )}
+        </div>
+        <button data-testId="toSignUpButton" onClick={toggleMode} className={toggleButton}>
           {mode === "login"
             ? "계정이 없으신가요? 회원가입하기"
             : "이미 계정이 있으신가요? 로그인하기"}
