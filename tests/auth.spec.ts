@@ -1,13 +1,13 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 // 테스트에 필요한 사용자 데이터
 const TEST_USER = {
   name: "테스트 사용자",
-  email: `q@q.q`,
+  email: "q@q.q",
   password: "q",
 };
 
-const onBoarding = async (page) => {
+const onBoarding = async (page: Page) => {
   await page.click(".hover\\:bg-c_purple\\.600");
   await page.click(".hover\\:bg-c_purple\\.600");
   await page.click(".hover\\:bg-c_purple\\.600");
