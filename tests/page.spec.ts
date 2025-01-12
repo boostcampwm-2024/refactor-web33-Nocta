@@ -12,6 +12,9 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("사이드바 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
   });
@@ -30,6 +33,9 @@ test.describe("사이드바 테스트", () => {
 
 test.describe("사이드바 페이지 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
   });
@@ -135,6 +141,9 @@ test.describe("사이드바 페이지 테스트", () => {
 
 test.describe("페이지 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
     await page.getByTestId("addPageButton").click();

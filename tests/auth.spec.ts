@@ -17,6 +17,9 @@ const onBoarding = async (page: Page) => {
 
 test.describe("인증 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
   });

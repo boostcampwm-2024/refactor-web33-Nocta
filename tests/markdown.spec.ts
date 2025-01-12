@@ -1,5 +1,4 @@
-import { test, expect } from "@playwright/test";
-import { escape } from "querystring";
+import { test, expect, Page } from "@playwright/test";
 
 const onBoarding = async (page) => {
   await page.click(".hover\\:bg-c_purple\\.600");
@@ -13,6 +12,9 @@ test.describe.configure({ mode: "serial" });
 
 test.describe("마크다운 에디터 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
     await page.getByTestId("addPageButton").click();
@@ -68,10 +70,12 @@ test.describe("마크다운 에디터 테스트", () => {
 
 test.describe("마크다운 문법 변환 테스트", () => {
   test.beforeEach(async ({ page }) => {
+    await page.context().addInitScript(() => {
+      window.sessionStorage.setItem("hasVisitedBefore", "true");
+    });
     await page.goto("/");
     await onBoarding(page);
     await page.getByTestId("addPageButton").click();
-    await page.waitForLoadState("networkidle");
     await page.getByTestId("pageItem-0").click();
     expect(page.getByTestId("page-0")).toBeVisible();
     const currentEditor = page.getByTestId("editor-0");
