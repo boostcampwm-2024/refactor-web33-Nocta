@@ -16,7 +16,7 @@
     "build:server": "cd server && pnpm build",
     "dev": "pnpm -r --parallel dev",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:ui": "playwright test --workers=1 --ui",
     "test:e2e:report": "playwright show-report"
   },
   "keywords": [],
