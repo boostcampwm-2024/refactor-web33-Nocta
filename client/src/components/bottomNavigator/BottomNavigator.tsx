@@ -29,7 +29,7 @@ export const BottomNavigator = ({
             key={page.id}
             icon={page.icon}
             size="md"
-            testKey={`iconButton-${idx}`}
+            testKey={`BottomNavigator-iconButton-${idx}`}
             onClick={() => {
               handlePageSelect({
                 pageId: page.id,

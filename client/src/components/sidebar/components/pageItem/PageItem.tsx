@@ -63,14 +63,18 @@ export const PageItem = ({
   };
 
   return (
-    <div data-testId={testKey} className={pageItemContainer} onClick={onClick}>
+    <div data-testid={testKey} className={pageItemContainer} onClick={onClick}>
       <PageIconButton
-        testKey={`${testKey}-pageIconButtion`}
+        testKey={`pageIconButton-${testKey.split("-")[1]}-${pageIcon}`}
         type={pageIcon ?? "Docs"}
         onClick={handleToggleModal}
       />
       <span className={textBox}>{title || "새로운 페이지"}</span>
-      <span className={`delete_box ${deleteBox}`} onClick={handleDelete}>
+      <span
+        data-testid={`pageDeleteButton-${testKey.split("-")[1]}`}
+        className={`delete_box ${deleteBox}`}
+        onClick={handleDelete}
+      >
         <CloseIcon width={16} height={16} />
       </span>
       {isOpen && (

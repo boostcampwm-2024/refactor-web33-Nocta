@@ -15,7 +15,7 @@ export const TextButton = ({
 }: TextButtonProps) => {
   return (
     <button
-      data-testId={testKey}
+      data-testid={testKey}
       className={textButtonContainer({ variant })}
       onClick={onClick}
       data-onboarding="login-button"

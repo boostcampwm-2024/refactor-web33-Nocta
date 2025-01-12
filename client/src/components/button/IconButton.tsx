@@ -14,7 +14,7 @@ export const IconButton = ({ icon, size, testKey, onClick }: IconButtonProps) =>
 
   return (
     <button
-      data-testId={testKey}
+      data-testid={testKey}
       className={iconButtonContainer({ size })}
       data-onboarding="page-add-button"
       onClick={onClick}

@@ -187,7 +187,7 @@ export const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             </p>
           )}
         </div>
-        <button data-testId="toSignUpButton" onClick={toggleMode} className={toggleButton}>
+        <button data-testid="toSignUpButton" onClick={toggleMode} className={toggleButton}>
           {mode === "login"
             ? "계정이 없으신가요? 회원가입하기"
             : "이미 계정이 있으신가요? 로그인하기"}
