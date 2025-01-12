@@ -69,7 +69,9 @@ export const PageItem = ({
         type={pageIcon ?? "Docs"}
         onClick={handleToggleModal}
       />
-      <span className={textBox}>{title || "새로운 페이지"}</span>
+      <span data-testid={`sidebarTitle-${testKey.split("-")[1]}`} className={textBox}>
+        {title || "새로운 페이지"}
+      </span>
       <span
         data-testid={`pageDeleteButton-${testKey.split("-")[1]}`}
         className={`delete_box ${deleteBox}`}

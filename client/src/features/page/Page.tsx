@@ -77,7 +77,7 @@ export const Page = ({
         onPointerDown={handlePageClick}
       >
         <div className={pageHeader} onPointerDown={pageDrag} onClick={handlePageClick}>
-          <PageTitle title={title} icon={icon} />
+          <PageTitle testKey={testKey.split("-")[1]} title={title} icon={icon} />
           <PageControlButton
             testKey={testKey.split("-")[1]}
             isMaximized={isMaximized}
@@ -87,6 +87,7 @@ export const Page = ({
           />
         </div>
         <Editor
+          testKey={`${testKey.split("-")[1]}`}
           onTitleChange={onTitleChange}
           pageId={id}
           pageTitle={title}

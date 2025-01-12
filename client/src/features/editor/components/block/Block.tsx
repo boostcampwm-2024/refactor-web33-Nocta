@@ -27,6 +27,7 @@ import {
 } from "./Block.style";
 
 interface BlockProps {
+  testKey: string;
   id: string;
   block: CRDTBlock;
   dragBlockList: string[];
@@ -70,6 +71,7 @@ interface BlockProps {
 }
 export const Block: React.FC<BlockProps> = memo(
   ({
+    testKey,
     id,
     block,
     dragBlockList,
@@ -273,7 +275,7 @@ export const Block: React.FC<BlockProps> = memo(
     return (
       // TODO: eslint 규칙을 수정해야 할까?
       // TODO: ol일때 index 순서 처리
-      <div style={{ position: "relative" }}>
+      <div data-testid={testKey} style={{ position: "relative" }}>
         {showTopIndicator && <Indicator />}
         <motion.div
           ref={setNodeRef}
@@ -297,6 +299,7 @@ export const Block: React.FC<BlockProps> = memo(
             />
 
             <IconBlock
+              testKey="iconBlock"
               type={block.type}
               index={block.listIndex}
               indent={block.indent}
@@ -304,6 +307,7 @@ export const Block: React.FC<BlockProps> = memo(
               onCheckboxClick={handleCheckboxClick}
             />
             <div
+              data-testid="contentEditable"
               ref={blockRef}
               onKeyDown={(e) => handleKeyDown(e, blockRef.current, block)}
               onInput={handleInput}
