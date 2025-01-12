@@ -15,7 +15,7 @@ export const PageIconModal = ({ onClose, onSelect, currentType }: PageIconModalP
   return (
     <div className={IconModal} onClick={onClose}>
       <div className={IconModalContainer} onClick={onClose}>
-        <button onClick={onClose} className={IconModalClose}>
+        <button data-testId="iconModalCloseButton" onClick={onClose} className={IconModalClose}>
           <RiCloseLine width={16} height={16} />
         </button>
         <div>
@@ -39,6 +39,7 @@ export const PageIconModal = ({ onClose, onSelect, currentType }: PageIconModalP
 
                   return (
                     <button
+                      data-testid={`iconModalButton-${iconType}`}
                       key={iconType}
                       onClick={(e) => onSelect(e, iconType)}
                       className={IconButton(isSelected)}

@@ -4,14 +4,15 @@ import { IconBox } from "./PageIconButton.style";
 
 interface PageIconButtonProps {
   type: PageIconType;
+  testKey: string;
   onClick: (e: React.MouseEvent) => void;
 }
 
-export const PageIconButton = ({ type, onClick }: PageIconButtonProps) => {
+export const PageIconButton = ({ type, testKey, onClick }: PageIconButtonProps) => {
   const { icon: IconComponent, color: defaultColor }: IconConfig = iconComponents[type];
 
   return (
-    <div style={{ position: "relative" }}>
+    <div data-testId={testKey} style={{ position: "relative" }}>
       <div className={IconBox} onClick={(e) => onClick(e)}>
         <IconComponent color={defaultColor} size="24px" />
       </div>

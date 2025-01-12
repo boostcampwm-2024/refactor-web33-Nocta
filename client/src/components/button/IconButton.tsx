@@ -5,14 +5,16 @@ import { iconButtonContainer } from "./IconButton.style";
 interface IconButtonProps {
   icon: PageIconType | "plus";
   size: "sm" | "md";
+  testKey: string;
   onClick?: () => void;
 }
 
-export const IconButton = ({ icon, size, onClick }: IconButtonProps) => {
+export const IconButton = ({ icon, size, testKey, onClick }: IconButtonProps) => {
   const { icon: IconComponent, color: defaultColor }: IconConfig = iconComponents[icon];
 
   return (
     <button
+      data-testId={testKey}
       className={iconButtonContainer({ size })}
       data-onboarding="page-add-button"
       onClick={onClick}

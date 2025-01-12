@@ -10,6 +10,7 @@ interface PageItemProps {
   id: string;
   title: string;
   icon: PageIconType;
+  testKey: string;
   onClick: () => void;
   onDelete?: (id: string) => void; // 추가: 삭제 핸들러
   handleIconUpdate: (
@@ -23,6 +24,7 @@ export const PageItem = ({
   id,
   icon,
   title,
+  testKey,
   onClick,
   onDelete,
   handleIconUpdate,
@@ -61,8 +63,12 @@ export const PageItem = ({
   };
 
   return (
-    <div className={pageItemContainer} onClick={onClick}>
-      <PageIconButton type={pageIcon ?? "Docs"} onClick={handleToggleModal} />
+    <div data-testId={testKey} className={pageItemContainer} onClick={onClick}>
+      <PageIconButton
+        testKey={`${testKey}-pageIconButtion`}
+        type={pageIcon ?? "Docs"}
+        onClick={handleToggleModal}
+      />
       <span className={textBox}>{title || "새로운 페이지"}</span>
       <span className={`delete_box ${deleteBox}`} onClick={handleDelete}>
         <CloseIcon width={16} height={16} />
