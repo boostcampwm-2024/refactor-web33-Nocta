@@ -24,12 +24,14 @@ import {
   RemoteCharUpdateOperation,
   CursorPosition,
 } from "@noctaCrdt/Interfaces";
-import { Logger } from "@nestjs/common";
+import { Logger, UseInterceptors } from "@nestjs/common";
 import { nanoid } from "nanoid";
 import { Page } from "@noctaCrdt/Page";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
 import { AuthService } from "../auth/auth.service";
 import { WorkspaceInviteData } from "./workspace.interface";
+import { MetricInterceptor } from "../metric/metric.interceptor";
+
 // 클라이언트 맵 타입 정의
 interface ClientInfo {
   clientId: number; // 서버가 부여한 아이디로, 0,1,2,3, 같은 숫자임.
@@ -55,6 +57,7 @@ type Operation =
   | RemoteCharUpdateOperation
   | CursorPosition;
 
+@UseInterceptors(MetricInterceptor)
 @WebSocketGateway({
   cors: {
     origin:
@@ -453,6 +456,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         page: newPage.serialize(),
       } as RemotePageCreateOperation;
       client.emit("create/page", operation);
+      console.log("페이지정보:", operation);
 
       this.emitOperation(client.id, workspaceId, "create/page", operation, batch);
     } catch (error) {
@@ -773,6 +777,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() data: RemoteCharInsertOperation,
     @ConnectedSocket() client: Socket,
     batch: boolean = false,
+    startTime: string,
   ): Promise<void> {
     const clientInfo = this.clientMap.get(client.id);
     try {
@@ -803,6 +808,9 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         backgroundColor: data.node.backgroundColor ? data.node.backgroundColor : "transparent",
       } as RemoteCharInsertOperation;
       this.emitOperation(client.id, data.pageId, "insert/char", operation, batch);
+      const endTime = performance.now();
+      const totalTime = endTime - startTime;
+      console.log("insert/char test time : ", totalTime);
     } catch (error) {
       this.logger.error(
         `Char Insert 연산 처리 중 오류 발생 - Client ID: ${clientInfo?.clientId}`,

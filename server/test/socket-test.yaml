@@ -1,0 +1,90 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 1
+      arrivalRate: 1
+  engines:
+    socketio-v3: {}
+  socketio:
+    transports: ["websocket"]
+    path: "/api/socket.io"
+    auth:
+      userId: "guest"
+      workspaceId: null
+  processor: "./processors.js"
+
+# scenarios:
+#   - name: "create page "
+
+scenarios:
+  - name: "Complete page editing test flow"
+    engine: "socketio-v3"
+    flow:
+      # Initial connection
+      - connect: {}
+
+      # Wait for connection setup
+      - think: 2
+
+      # Create page and capture ID
+      - function: "handlePageCreation"
+
+      # Brief wait for processing
+      - think: 1
+
+      # Log saved page ID to verify
+      - log: "Using page ID: {{ pageId }}"
+
+      # Join the newly created page
+      - emit:
+          channel: "join/page"
+          data:
+            pageId: "{{ pageId }}"
+
+      # Rest of your test scenario...
+
+      # Create initial block in the page
+      - emit:
+          channel: "insert/block"
+          data:
+            type: "blockInsert"
+            node:
+              id:
+                clock: 1
+                client: 3
+              value: ""
+              next: null
+              prev: null
+              style: []
+              type: "p"
+              indent: 0
+              animation: "none"
+              icon: ""
+              crdt:
+                clock: 0
+                client: 3
+                LinkedList:
+                  head: null
+                  nodeMap: {}
+                currentCaret: 0
+            pageId: "{{ pageId }}" # 일관된 변수명 사용
+
+      # Wait for block creation
+      - think: 1
+
+      # Multiple character insertions
+      - function: "handleCharInsertion"
+      - loop:
+          - function: "generateCharData"
+          - log: "Inserting character: {{ charNode.value }} (prev: {{ charNode.prev }}, next: {{ charNode.next }})"
+          - emit:
+              channel: "insert/char"
+              data:
+                type: "charInsert"
+                node: "{{ charNode }}"
+                blockId:
+                  clock: 1
+                  client: 3
+                pageId: "{{ pageId }}"
+          - think: 0.1
+        count: 50

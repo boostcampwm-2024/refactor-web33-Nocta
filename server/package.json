@@ -20,7 +20,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:load": "artillery run ./test/socket-test.yaml",
+    "test:load:report": "artillery run ./test/socket-test.yml --output report.json && artillery report report.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
@@ -35,6 +37,7 @@
     "@nestjs/websockets": "^10.4.7",
     "@noctaCrdt": "workspace:*",
     "@types/cookie-parser": "^1.4.7",
+    "artillery": "^2.0.21",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.7",
     "express": "^4.21.1",

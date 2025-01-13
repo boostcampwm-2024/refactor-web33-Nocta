@@ -1,0 +1,129 @@
+config:
+  target: "http://localhost:3000" # 개발 환경 기준
+  phases:
+    - duration: 30 # 30초
+      arrivalRate: 10 # 초당 10명의 새로운 사용자 접속
+  engines:
+    socketio-v3: {} # Socket.IO v3 엔진 사용
+  socketio:
+    transports: ["websocket"]
+    path: "/api/socket.io"
+    query:
+      userId: "guest"
+      workspaceId: null
+  processor: "./processors.js"
+
+# 초기 기본 테스트용
+# scenarios:
+#   - name: "워크스페이스의 페이지 접속 후 퇴장"
+#     engine: "socketio-v3"
+#     flow:
+#       # 1. 초기 연결 및 인증
+#       - think: 1
+#       - emit:
+#           channel: "connection"
+#           data:
+#             userId: "guest"
+
+#       # 2. 페이지 참여
+#       - think: 2
+#       - emit:
+#           channel: "join/page"
+#           data:
+#             pageId: "IJ7vUTAOtNanunKAAEDLp"
+
+#       # 4. 페이지 퇴장
+#       - think: 2
+#       - emit:
+#           channel: "leave/page"
+#           data:
+#             pageId: "IJ7vUTAOtNanunKAAEDLp"
+
+scenarios:
+  - name: "한 페이지에서 동시 입력 테스트"
+    engine: "socketio-v3"
+    flow:
+      - connect: {}
+
+      # 워크스페이스 접속
+      - emit:
+          channel: "workspace:join"
+          data:
+            workspaceId: "test-workspace"
+            userId: "{{ $randomString() }}"
+
+      # 새 페이지 생성
+      - emit:
+          channel: "create/page"
+          data:
+            workspaceId: "test-workspace"
+            clientId: "{{ $clientId }}"
+
+      # 페이지 생성 응답 캡처
+      - think: 1
+      - collect:
+          response:
+            capture: # 서버 응답에서 페이지 ID 캡처
+              - json: "$.page.id"
+                as: "createdPageId"
+
+      # 생성된 페이지에 접속
+      - emit:
+          channel: "page:join"
+          data:
+            pageId: "{{ createdPageId }}"
+
+      # 여러 문자 입력 시뮬레이션
+      - loop:
+          - function: "generateNodeData"
+          - emit:
+              channel: "insert/char"
+              data:
+                type: "charInsert"
+                node: "{{ $node }}"
+                blockId:
+                  clock: "{{ $timestamp }}"
+                  client: "{{ $clientId }}"
+                pageId: "{{ createdPageId }}"
+          - think: 0.1
+        count: 20
+
+      # 페이지 나가기
+      - emit:
+          channel: "page:leave"
+          data:
+            pageId: "{{ createdPageId }}"
+
+      - think: 1
+      - disconnect: {}
+# scenarios:
+#   - name: "하나의 페이지에서 같은 블럭에서 텍스트 입력/삭제 처리"
+#     engine: "socketio-v3"
+#     flow:
+
+# scenarios:
+#   - name: "하나의 페이지에서 블럭 입력/삭제처리"
+#     engine: "socketio-v3"
+#     flow:
+
+# # 300개의 socket통신이 얼마나 빨리 끝나나?
+# # join/page, leave/page -> join/page 서버로부터 page정보 ( 만약에 엄청많다면? 10,000,000자된다면? )를 받아서 client에 표시됨
+# # 여러명이 하나의 페이지에 접속할때 부하 테스트
+# # - 만약 페이지 정보를 읽어오는 과정에 이미 접속한 사람이 입력을 하게 된다면 어떻게 되나?
+
+# # 여러 페이지
+# scenarios:
+#   - name: "여러 페이지에서 각자 텍스트 입력/삭제처리"
+#     engine: "socketio-v3"
+#     flow:
+
+# scenarios:
+#   - name: "여러 페이지에서 각자 블럭 입력/삭제처리"
+#     engine: "socketio-v3"
+#     flow:
+
+# # 하나의 워크스페이스
+# scenarios:
+#   - name: "하나의 워크스페이스에서 페이지 추가/제거처리"
+#     engine: "socketio-v3"
+#     flow:
