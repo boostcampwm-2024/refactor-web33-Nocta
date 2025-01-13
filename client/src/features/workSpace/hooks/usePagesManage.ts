@@ -178,11 +178,21 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
       return;
     }
     if (!socketStore.socket) return;
-
+    const startTime = performance.now();
     // 페이지 데이터 수신 핸들러
     const handlePageData = (data: { pageId: string; serializedPage: any }) => {
       if (data.pageId === pageId) {
         // 페이지 데이터 업데이트
+        const endTime = performance.now();
+        const totalTime = endTime - startTime;
+
+        console.log({
+          event: "fetchPageData",
+          pageId,
+          totalTime: `${totalTime}ms`,
+          dataSize: JSON.stringify(data.serializedPage).length,
+          timestamp: new Date().toISOString(),
+        });
         updatePageData(pageId, data.serializedPage.crdt);
 
         // 로딩 상태 업데이트
