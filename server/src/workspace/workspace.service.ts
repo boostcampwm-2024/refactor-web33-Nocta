@@ -59,9 +59,8 @@ export class WorkSpaceService implements OnModuleInit {
         const clientCount = room ? room.size : 0;
         // 연결된 클라이언트가 없으면 DB에 저장하고 메모리에서 제거
         if (clientCount === 0) {
-          // const newWorkspace = await this.clearDeletedObject(workspace);
-          // const serializedData = newWorkspace.serialize();
-          const serializedData = workspace.serialize();
+          const newWorkspace = await this.clearDeletedObject(workspace);
+          const serializedData = newWorkspace.serialize();
           // 스키마에 맞게 데이터 변환
           const workspaceData = {
             id: roomId,
