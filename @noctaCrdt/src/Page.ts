@@ -1,6 +1,6 @@
 import { EditorCRDT } from "./Crdt";
 import { Block } from "./Node";
-import { CRDTSerializedProps, PageIconType } from "./Interfaces";
+import { CRDTSerializedProps, PageIconType } from "./types/Interfaces";
 
 export interface PageSerializedProps {
   id: string;

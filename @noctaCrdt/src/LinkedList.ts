@@ -1,6 +1,6 @@
 import { Node, Char, Block } from "./Node";
 import { NodeId, BlockId, CharId } from "./NodeId";
-import { InsertOperation, ReorderNodesProps } from "./Interfaces";
+import { ReorderNodesProps } from "./types/Interfaces";
 
 export abstract class LinkedList<T extends Node<NodeId>> {
   head: T["id"] | null;
@@ -25,7 +25,7 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     return this.nodeMap[JSON.stringify(id)] || null;
   }
 
-  deleteNode(id: T["id"]): void {
+  removeNode(id: T["id"]): void {
     const nodeToDelete = this.getNode(id);
     if (!nodeToDelete) return;
 
@@ -55,6 +55,25 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     delete this.nodeMap[JSON.stringify(id)];
   }
 
+  deleteNode(id: T["id"]): void {
+    const nodeToDelete = this.getNode(id);
+    if (!nodeToDelete) return;
+    nodeToDelete.deleted = true;
+  }
+
+  clearDeletedNode(): void {
+    let currentNodeId = this.head;
+
+    while (currentNodeId !== null) {
+      const currentNode = this.getNode(currentNodeId);
+      if (!currentNode) return;
+      if (currentNode.deleted) {
+        this.removeNode(currentNodeId);
+      }
+      currentNodeId = currentNode.next;
+    }
+  }
+
   updateAllOrderedListIndices() {}
 
   reorderNodes({ targetId, beforeId, afterId }: ReorderNodesProps): void {}
@@ -67,13 +86,20 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     let currentNodeId = this.head;
     let currentIndex = 0;
 
-    while (currentNodeId !== null && currentIndex < index) {
+    while (currentNodeId !== null) {
       const currentNode = this.getNode(currentNodeId);
       if (!currentNode) {
         throw new Error(`Node not found at index ${currentIndex}`);
       }
-      currentNodeId = currentNode.next;
-      currentIndex += 1;
+
+      if (!currentNode.deleted) {
+        if (currentIndex === index) {
+          return currentNode; // 찾은 노드를 바로 반환
+        }
+        currentIndex += 1;
+      }
+
+      currentNodeId = currentNode.next; // 다음 노드로 이동
     }
 
     if (currentNodeId === null) {
@@ -199,7 +225,9 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     while (currentNodeId !== null) {
       const currentNode = this.getNode(currentNodeId);
       if (!currentNode) break;
-      result += currentNode.value;
+      if (!currentNode.deleted) {
+        result += currentNode.value;
+      }
       currentNodeId = currentNode.next;
     }
 
@@ -212,7 +240,9 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     while (currentNodeId !== null) {
       const currentNode = this.getNode(currentNodeId);
       if (!currentNode) break;
-      result.push(currentNode!);
+      if (!currentNode.deleted) {
+        result.push(currentNode!);
+      }
       currentNodeId = currentNode.next;
     }
     return result;
@@ -248,6 +278,10 @@ export class BlockLinkedList extends LinkedList<Block> {
     let currentIndex = 1;
 
     while (currentNode) {
+      if (currentNode.deleted) {
+        currentNode = currentNode.next ? this.getNode(currentNode.next) : null;
+        continue;
+      }
       if (currentNode.type === "ol") {
         const prevNode = currentNode.prev ? this.getNode(currentNode.prev) : null;
 

@@ -1,10 +1,11 @@
 // Node.ts
 import { NodeId, BlockId, CharId } from "./NodeId";
-import { AnimationType, ElementType, TextColorType, BackgroundColorType } from "./Interfaces";
+import { AnimationType, ElementType, TextColorType, BackgroundColorType } from "./types/Interfaces";
 import { BlockCRDT } from "./Crdt";
 
 export abstract class Node<T extends NodeId> {
   id: T;
+  deleted: boolean;
   value: string;
   next: T | null;
   prev: T | null;
@@ -12,6 +13,7 @@ export abstract class Node<T extends NodeId> {
 
   constructor(value: string, id: T) {
     this.id = id;
+    this.deleted = false;
     this.value = value;
     this.next = null;
     this.prev = null;
@@ -19,8 +21,9 @@ export abstract class Node<T extends NodeId> {
   }
 
   precedes(node: Node<T>): boolean {
-    if (!this.prev || !node.prev) return false;
-    if (!this.prev.equals(node.prev)) return false;
+    if (this.prev && node.prev) {
+      if (!this.prev.equals(node.prev)) return false;
+    }
 
     if (this.id.clock < node.id.clock) return true;
     if (this.id.clock === node.id.clock && this.id.client < node.id.client) return true;
@@ -32,6 +35,7 @@ export abstract class Node<T extends NodeId> {
     return {
       id: this.id.serialize(),
       value: this.value,
+      deleted: this.deleted,
       next: this.next ? this.next.serialize() : null,
       prev: this.prev ? this.prev.serialize() : null,
       style: this.style,

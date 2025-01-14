@@ -13,7 +13,7 @@ import {
   RemoteCharUpdateOperation,
   TextColorType,
   BackgroundColorType,
-} from "./Interfaces";
+} from "./types/Interfaces";
 
 export class CRDT<T extends Node<NodeId>> {
   clock: number;
