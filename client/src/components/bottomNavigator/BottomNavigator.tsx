@@ -17,7 +17,7 @@ export const BottomNavigator = ({
 }: BottomNavigatorProps) => {
   return (
     <div className={bottomNavigatorContainer} {...BottomNavigatorOnBoardingProps}>
-      {pages.map((page) => (
+      {pages.map((page, idx) => (
         <motion.div
           key={page.id}
           initial={animation.initial}
@@ -29,6 +29,7 @@ export const BottomNavigator = ({
             key={page.id}
             icon={page.icon}
             size="md"
+            testKey={`BottomNavigator-iconButton-${idx}`}
             onClick={() => {
               handlePageSelect({
                 pageId: page.id,

@@ -84,13 +84,14 @@ export const Sidebar = ({
 
   return (
     <motion.aside
+      data-testid="sidebar"
       className={sidebarContainer}
       initial="open"
       animate={isSidebarOpen ? "open" : "closed"}
       variants={sidebarVariants}
       {...sidebarOnBoardingProps}
     >
-      <div className={sidebarToggleButton} onClick={toggleSidebar}>
+      <div data-testid="sidebarToggle" className={sidebarToggleButton} onClick={toggleSidebar}>
         {isSidebarOpen ? "«" : "»"}
       </div>
       <motion.div variants={contentVariants}>
@@ -100,7 +101,7 @@ export const Sidebar = ({
         {pages.length === 0 ? (
           <div className={placeholderMessage}>+ 버튼을 눌러 페이지를 추가하세요</div>
         ) : (
-          pages?.map((item) => (
+          pages?.map((item, idx) => (
             <motion.div
               key={item.id}
               initial={animation.initial}
@@ -109,6 +110,7 @@ export const Sidebar = ({
             >
               <PageItem
                 {...item}
+                testKey={`pageItem-${idx}`}
                 onClick={() => handlePageItemClick(item.id)}
                 onDelete={() => confirmPageDelete(item)}
                 handleIconUpdate={handlePageUpdate}
@@ -118,7 +120,12 @@ export const Sidebar = ({
         )}
       </motion.nav>
       <motion.div className={plusIconBox} variants={contentVariants}>
-        <IconButton icon="plus" onClick={handleAddPageButtonClick} size="sm" />
+        <IconButton
+          testKey="addPageButton"
+          icon="plus"
+          onClick={handleAddPageButtonClick}
+          size="sm"
+        />
         <AuthButton />
       </motion.div>
 

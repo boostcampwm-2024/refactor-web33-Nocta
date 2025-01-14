@@ -26,11 +26,11 @@ export const AuthButton = () => {
   return (
     <div className={container}>
       {isLogin ? (
-        <TextButton onClick={openLogoutModal} variant="secondary">
+        <TextButton testKey="sidebarLogoutButton" onClick={openLogoutModal} variant="secondary">
           로그아웃
         </TextButton>
       ) : (
-        <TextButton onClick={openAuthModal} variant="secondary">
+        <TextButton testKey="sidebarLoginButton" onClick={openAuthModal} variant="secondary">
           로그인
         </TextButton>
       )}

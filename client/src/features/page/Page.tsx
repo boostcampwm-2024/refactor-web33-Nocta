@@ -9,6 +9,7 @@ import { PageTitle } from "./components/PageTitle/PageTitle";
 import { DIRECTIONS, usePage } from "./hooks/usePage";
 
 interface PageProps extends PageType {
+  testKey: string;
   handlePageSelect: ({ pageId, isSidebar }: { pageId: string; isSidebar?: boolean }) => void;
   handlePageClose: (pageId: string) => void;
   handleTitleChange: (
@@ -23,6 +24,7 @@ export const Page = ({
   id,
   x,
   y,
+  testKey,
   title,
   zIndex,
   icon,
@@ -64,6 +66,7 @@ export const Page = ({
     <AnimatePresence>
       <div
         id={id}
+        data-testid={testKey}
         className={pageContainer}
         style={{
           width: `${size.width}px`,
@@ -74,8 +77,9 @@ export const Page = ({
         onPointerDown={handlePageClick}
       >
         <div className={pageHeader} onPointerDown={pageDrag} onClick={handlePageClick}>
-          <PageTitle title={title} icon={icon} />
+          <PageTitle testKey={testKey.split("-")[1]} title={title} icon={icon} />
           <PageControlButton
+            testKey={testKey.split("-")[1]}
             isMaximized={isMaximized}
             onPageClose={() => handlePageClose(id)}
             onPageMaximize={pageMaximize}
@@ -83,6 +87,7 @@ export const Page = ({
           />
         </div>
         <Editor
+          testKey={`${testKey.split("-")[1]}`}
           onTitleChange={onTitleChange}
           pageId={id}
           pageTitle={title}
