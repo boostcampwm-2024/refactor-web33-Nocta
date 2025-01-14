@@ -7,7 +7,7 @@ import svgr from "vite-plugin-svgr";
 export default defineConfig({
   plugins: [react(), tsconfigPaths(), svgr()],
   resolve: {
-    alias: { "@noctaCrdt": path.resolve(__dirname, "../@noctaCrdt") },
+    alias: { "@noctaCrdt": path.resolve(__dirname, "../@noctaCrdt/src") },
   },
   publicDir: "public",
 });

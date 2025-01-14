@@ -1,32 +1,44 @@
 {
   "name": "@noctaCrdt",
   "version": "1.0.0",
-  "main": "./dist/Crdt.js",
-  "module": "./dist/Crdt.js",
-  "types": "dist/Crdt.d.ts",
+  "main": "./dist/src/Crdt.js",
+  "module": "./dist/src/Crdt.js",
+  "types": "dist/src/Crdt.d.ts",
   "scripts": {
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "exports": {
     "./Crdt": {
-      "require": "./dist/Crdt.js",
-      "import": "./dist/Crdt.js",
-      "types": "./dist/Crdt.d.js"
+      "require": "./dist/src/Crdt.js",
+      "import": "./dist/src/Crdt.js",
+      "types": "./dist/src/Crdt.d.js"
     },
     "./Node": {
-      "require": "./dist/Node.js",
-      "import": "./dist/Node.js",
-      "types": "./dist/Node.d.ts"
+      "require": "./dist/src/Node.js",
+      "import": "./dist/src/Node.js",
+      "types": "./dist/src/Node.d.ts"
     },
     "./LinkedList": {
-      "require": "./dist/LinkedList.js",
-      "import": "./dist/LinkedList.js",
-      "types": "./dist/LinkedList.d.ts"
+      "require": "./dist/src/LinkedList.js",
+      "import": "./dist/src/LinkedList.js",
+      "types": "./dist/src/LinkedList.d.ts"
     },
     "./Interfaces": {
-      "require": "./dist/Interfaces.js",
-      "import": "./dist/Interfaces.js",
-      "types": "./dist/Interfaces.d.ts"
+      "require": "./dist/src/types/Interfaces.js",
+      "import": "./dist/src/types/Interfaces.js",
+      "types": "./dist/src/types/Interfaces.d.ts"
+    },
+    "./Workspace": {
+      "require": "./dist/src/Workspace.js",
+      "import": "./dist/src/Workspace.js",
+      "types": "./dist/src/Workspace.d.ts"
     }
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.2",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0"
   }
 }

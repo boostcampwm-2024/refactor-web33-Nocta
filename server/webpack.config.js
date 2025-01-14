@@ -5,7 +5,7 @@ module.exports = {
   resolve: {
     extensions: [".ts", ".js"],
     alias: {
-      "@noctaCrdt": path.resolve(__dirname, "../@noctaCrdt/dist"),
+      "@noctaCrdt": path.resolve(__dirname, "../@noctaCrdt/dist/src"),
     },
   },
   module: {
