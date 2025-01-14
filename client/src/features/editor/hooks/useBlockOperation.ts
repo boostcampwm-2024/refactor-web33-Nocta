@@ -1,7 +1,10 @@
 import { EditorCRDT } from "@noctaCrdt/Crdt";
-import { RemoteBlockCheckboxOperation, RemoteCharInsertOperation } from "@noctaCrdt/Interfaces";
 import { Block } from "@noctaCrdt/Node";
 import { BlockId } from "@noctaCrdt/NodeId";
+import {
+  RemoteBlockCheckboxOperation,
+  RemoteCharInsertOperation,
+} from "@noctaCrdt/types/Interfaces";
 import { useCallback } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore";
 import { getAbsoluteCaretPosition } from "@src/utils/caretUtils";

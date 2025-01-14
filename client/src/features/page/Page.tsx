@@ -1,4 +1,4 @@
-import { PageIconType, serializedEditorDataProps } from "@noctaCrdt/Interfaces";
+import { PageIconType, serializedEditorDataProps } from "@noctaCrdt/types/Interfaces";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Editor } from "@features/editor/Editor";

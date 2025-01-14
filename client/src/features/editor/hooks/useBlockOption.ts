@@ -1,4 +1,7 @@
 import { BlockCRDT, EditorCRDT } from "@noctaCrdt/Crdt";
+import { BlockLinkedList } from "@noctaCrdt/LinkedList";
+import { Block } from "@noctaCrdt/Node";
+import { BlockId } from "@noctaCrdt/NodeId";
 import {
   AnimationType,
   ElementType,
@@ -6,10 +9,7 @@ import {
   RemoteBlockInsertOperation,
   RemoteBlockUpdateOperation,
   RemoteCharInsertOperation,
-} from "@noctaCrdt/Interfaces";
-import { Block } from "@noctaCrdt/Node";
-import { BlockId } from "@noctaCrdt/NodeId";
-import { BlockLinkedList } from "node_modules/@noctaCrdt/LinkedList";
+} from "@noctaCrdt/types/Interfaces";
 import { EditorStateProps } from "../Editor";
 
 interface useBlockOptionSelectProps {

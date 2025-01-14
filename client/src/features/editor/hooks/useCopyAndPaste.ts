@@ -1,6 +1,6 @@
 import { EditorCRDT } from "@noctaCrdt/Crdt";
-import { TextColorType, BackgroundColorType } from "@noctaCrdt/Interfaces";
 import { Block } from "@noctaCrdt/Node";
+import { TextColorType, BackgroundColorType } from "@noctaCrdt/types/Interfaces";
 import { useCallback } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore";
 import { EditorStateProps } from "../Editor";

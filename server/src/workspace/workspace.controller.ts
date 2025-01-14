@@ -4,7 +4,7 @@ import { ApiTags } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { Request as ExpressRequest } from "express";
 import { Workspace } from "./schemas/workspace.schema";
-import { WorkspaceListItem } from "@noctaCrdt/Interfaces";
+import { WorkspaceListItem } from "@noctaCrdt/types/Interfaces";
 
 @ApiTags("workspace")
 @UseGuards(JwtAuthGuard)

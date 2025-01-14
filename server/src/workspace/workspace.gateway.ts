@@ -23,7 +23,7 @@ import {
   RemoteBlockCheckboxOperation,
   RemoteCharUpdateOperation,
   CursorPosition,
-} from "@noctaCrdt/Interfaces";
+} from "@noctaCrdt/types/Interfaces";
 import { Logger } from "@nestjs/common";
 import { nanoid } from "nanoid";
 import { Page } from "@noctaCrdt/Page";

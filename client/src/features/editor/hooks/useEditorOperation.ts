@@ -1,4 +1,6 @@
 import { EditorCRDT } from "@noctaCrdt/Crdt";
+import { TextLinkedList } from "@noctaCrdt/LinkedList";
+import { CharId } from "@noctaCrdt/NodeId";
 import {
   RemoteBlockDeleteOperation,
   RemoteCharInsertOperation,
@@ -8,9 +10,7 @@ import {
   RemoteCharUpdateOperation,
   RemoteBlockInsertOperation,
   RemoteBlockCheckboxOperation,
-} from "@noctaCrdt/Interfaces";
-import { TextLinkedList } from "@noctaCrdt/LinkedList";
-import { CharId } from "@noctaCrdt/NodeId";
+} from "@noctaCrdt/types/Interfaces";
 import { useCallback } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore";
 import { EditorStateProps } from "../Editor";

@@ -1,13 +1,13 @@
 import { EditorCRDT, BlockCRDT } from "@noctaCrdt/Crdt";
+import { BlockLinkedList } from "@noctaCrdt/LinkedList";
+import { Block } from "@noctaCrdt/Node";
 import {
   RemoteBlockInsertOperation,
   RemoteBlockDeleteOperation,
   RemoteBlockUpdateOperation,
   RemoteCharInsertOperation,
   RemoteCharDeleteOperation,
-} from "@noctaCrdt/Interfaces";
-import { BlockLinkedList } from "@noctaCrdt/LinkedList";
-import { Block } from "@noctaCrdt/Node";
+} from "@noctaCrdt/types/Interfaces";
 import { useCallback } from "react";
 import { EditorStateProps } from "@features/editor/Editor";
 import { checkMarkdownPattern } from "@src/features/editor/utils/markdownPatterns";

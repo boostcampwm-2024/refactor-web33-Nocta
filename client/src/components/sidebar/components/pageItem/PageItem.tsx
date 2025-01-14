@@ -1,4 +1,4 @@
-import { PageIconType } from "@noctaCrdt/Interfaces";
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { useEffect, useState } from "react";
 import CloseIcon from "@assets/icons/close.svg?react";
 import { useModal } from "@src/components/modal/useModal";

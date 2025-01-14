@@ -1,10 +1,10 @@
 import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Workspace, WorkspaceDocument } from "./schemas/workspace.schema";
-import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/WorkSpace";
+import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/Workspace";
 import { Model } from "mongoose";
 import { Server } from "socket.io";
-import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/Interfaces";
+import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/types/Interfaces";
 import { Page } from "@noctaCrdt/Page";
 import { Block } from "@noctaCrdt/Node";
 import { BlockId } from "@noctaCrdt/NodeId";

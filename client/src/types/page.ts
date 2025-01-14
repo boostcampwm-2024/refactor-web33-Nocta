@@ -1,4 +1,4 @@
-import { serializedEditorDataProps, PageIconType } from "@noctaCrdt/Interfaces";
+import { serializedEditorDataProps, PageIconType } from "@noctaCrdt/types/Interfaces";
 
 export interface Page {
   id: string;

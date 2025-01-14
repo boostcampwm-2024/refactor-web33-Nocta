@@ -1,4 +1,4 @@
-import { BackgroundColorType } from "@noctaCrdt/Interfaces";
+import { BackgroundColorType } from "@noctaCrdt/types/Interfaces";
 import { css, cva } from "@styled-system/css";
 
 type ColorVariants = {

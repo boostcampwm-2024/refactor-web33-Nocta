@@ -1,4 +1,4 @@
-import { WorkspaceListItem } from "@noctaCrdt/Interfaces"; // 이전에 만든 인터페이스 import
+import { WorkspaceListItem } from "@noctaCrdt/types/Interfaces"; // 이전에 만든 인터페이스 import
 import { useState } from "react";
 import PencilIcon from "@assets/icons/pencil.svg?react";
 import { RenameModal } from "@src/components/modal/RenameModal";

@@ -1,5 +1,5 @@
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { motion } from "framer-motion";
-import { PageIconType } from "node_modules/@noctaCrdt/Interfaces";
 import { useState } from "react";
 import { IconButton } from "@components/button/IconButton";
 import { Modal } from "@components/modal/modal";

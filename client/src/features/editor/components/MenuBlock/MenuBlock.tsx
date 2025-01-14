@@ -1,4 +1,4 @@
-import { AnimationType, ElementType } from "@noctaCrdt/Interfaces";
+import { AnimationType, ElementType } from "@noctaCrdt/types/Interfaces";
 import { useState, useRef } from "react";
 import DraggableIcon from "@assets/icons/draggable.svg?url";
 import { useModal } from "@src/components/modal/useModal";

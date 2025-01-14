@@ -1,4 +1,4 @@
-import { AnimationType, ElementType, TextStyleType } from "@noctaCrdt/Interfaces";
+import { AnimationType, ElementType, TextStyleType } from "@noctaCrdt/types/Interfaces";
 
 export const OPTION_CATEGORIES = {
   TYPE: {

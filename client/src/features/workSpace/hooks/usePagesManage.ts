@@ -1,11 +1,11 @@
+import { Page as CRDTPage } from "@noctaCrdt/Page";
+import { WorkSpace } from "@noctaCrdt/WorkSpace";
 import {
   PageIconType,
   RemotePageCreateOperation,
   RemotePageUpdateOperation,
   serializedEditorDataProps,
-} from "@noctaCrdt/Interfaces";
-import { Page as CRDTPage } from "@noctaCrdt/Page";
-import { WorkSpace } from "@noctaCrdt/WorkSpace";
+} from "@noctaCrdt/types/Interfaces";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { PAGE, SIDE_BAR } from "@src/constants/size";
 import { useSocketStore } from "@src/stores/useSocketStore";

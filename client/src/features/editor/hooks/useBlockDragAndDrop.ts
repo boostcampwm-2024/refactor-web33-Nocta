@@ -4,7 +4,7 @@ import { Block } from "@noctaCrdt/Node";
 import {
   RemoteBlockReorderOperation,
   RemoteBlockUpdateOperation,
-} from "node_modules/@noctaCrdt/Interfaces";
+} from "@noctaCrdt/types/Interfaces";
 import { useSocketStore } from "@src/stores/useSocketStore.ts";
 import { EditorStateProps } from "../Editor";
 
