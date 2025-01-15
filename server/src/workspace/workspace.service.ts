@@ -1,7 +1,7 @@
 import { Injectable, OnModuleInit, Logger } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { Workspace, WorkspaceDocument } from "./schemas/workspace.schema";
-import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/Workspace";
+import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/WorkSpace";
 import { Model } from "mongoose";
 import { Server } from "socket.io";
 import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/types/Interfaces";
