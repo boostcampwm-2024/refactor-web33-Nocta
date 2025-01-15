@@ -21,8 +21,8 @@ const config: Config = {
   transformIgnorePatterns: ["/node_modules/(?!(nanoid)/)", "/node_modules/(?!@noctaCrdt)"],
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
-    "^@noctaCrdt$": "<rootDir>/../@noctaCrdt/dist/Crdt.js",
-    "^@noctaCrdt/(.*)$": "<rootDir>/../@noctaCrdt/dist/$1.js",
+    "^@noctaCrdt$": "<rootDir>/../@noctaCrdt/dist/src/Crdt.js",
+    "^@noctaCrdt/(.*)$": "<rootDir>/../@noctaCrdt/dist/src/$1.js",
     "^nanoid$": require.resolve("nanoid"),
   },
 };
