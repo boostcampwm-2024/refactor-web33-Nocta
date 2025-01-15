@@ -1,5 +1,6 @@
 import type { Config } from "jest";
-const path = require("path");
+import path from "path"; // require 대신 import 사용
+
 const config: Config = {
   moduleFileExtensions: ["js", "json", "ts"],
   rootDir: ".",
