@@ -1,5 +1,5 @@
 import type { Config } from "jest";
-
+const path = require("path");
 const config: Config = {
   moduleFileExtensions: ["js", "json", "ts"],
   rootDir: ".",
@@ -22,9 +22,10 @@ const config: Config = {
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
     "^@noctaCrdt$": "<rootDir>/../@noctaCrdt/dist/src/Crdt.js",
-    "^@noctaCrdt/(.*)$": "<rootDir>/../@noctaCrdt/dist/src/$1.js",
+    "^@noctaCrdt/(.*)$": path.join(__dirname, "../@noctaCrdt/dist/src/$1"),
     "^nanoid$": require.resolve("nanoid"),
   },
+  modulePaths: [path.join(__dirname, ".."), "node_modules"],
 };
 
 export default config;
