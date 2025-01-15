@@ -146,7 +146,10 @@ export interface RemoteCharUpdateOperation {
 export interface CursorPosition {
   type: "cursor";
   clientId: number;
-  position: number;
+  workspaceId: string;
+  pageId: string;
+  blockId: string;
+  charId: string;
 }
 
 export interface CRDTSerializedProps<T> {

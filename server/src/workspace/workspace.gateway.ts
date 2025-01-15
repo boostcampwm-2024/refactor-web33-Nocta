@@ -913,10 +913,14 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         JSON.stringify(data),
       );
 
+      // broadcast용 cursor operation
       const operation = {
         type: "cursor",
         clientId: clientInfo?.clientId,
-        position: data.position,
+        workspaceId: data.workspaceId,
+        pageId: data.pageId,
+        blockId: data.blockId,
+        charId: data.charId,
       } as CursorPosition;
       const { workspaceId } = client.data;
       this.emitOperation(client.id, workspaceId, "cursor", operation, batch);

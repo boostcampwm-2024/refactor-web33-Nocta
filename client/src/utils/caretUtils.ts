@@ -6,8 +6,8 @@ interface SetCaretPositionProps {
   linkedList: BlockLinkedList | TextLinkedList;
   clientX?: number;
   clientY?: number;
-  position?: number; // Used to set the caret at a specific position
-  pageId: string; // Add rootElement to scope the query
+  position?: number;
+  pageId: string;
 }
 
 export const getAbsoluteCaretPosition = (element: HTMLElement): number => {
