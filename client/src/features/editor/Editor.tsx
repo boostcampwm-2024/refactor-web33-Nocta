@@ -28,13 +28,20 @@ export interface EditorStateProps {
 }
 
 interface EditorProps {
+  testKey: string;
   onTitleChange: (title: string, syncWithServer: boolean) => void;
   pageId: string;
   serializedEditorData: serializedEditorDataProps;
   pageTitle: string;
 }
 
-export const Editor = ({ onTitleChange, pageId, pageTitle, serializedEditorData }: EditorProps) => {
+export const Editor = ({
+  testKey,
+  onTitleChange,
+  pageId,
+  pageTitle,
+  serializedEditorData,
+}: EditorProps) => {
   const {
     sendCharInsertOperation,
     sendCharDeleteOperation,
@@ -343,9 +350,10 @@ export const Editor = ({ onTitleChange, pageId, pageTitle, serializedEditorData 
     return <div>Loading editor data...</div>;
   }
   return (
-    <div className={editorContainer}>
+    <div data-testid={`editor-${testKey}`} className={editorContainer}>
       <div className={editorTitleContainer}>
         <input
+          data-testid={`editorTitle-${testKey}`}
           type="text"
           placeholder="제목을 입력하세요..."
           onChange={handleTitleChange}
@@ -369,8 +377,9 @@ export const Editor = ({ onTitleChange, pageId, pageTitle, serializedEditorData 
               .map((block) => `${block.id.client}-${block.id.clock}`)}
             strategy={verticalListSortingStrategy}
           >
-            {editorState.linkedList.spread().map((block) => (
+            {editorState.linkedList.spread().map((block, idx) => (
               <Block
+                testKey={`block-${idx}`}
                 key={`${block.id.client}-${block.id.clock}`}
                 id={`${block.id.client}-${block.id.clock}`}
                 block={block}
@@ -397,7 +406,7 @@ export const Editor = ({ onTitleChange, pageId, pageTitle, serializedEditorData 
           </SortableContext>
         </DndContext>
         {editorState.linkedList.spread().length === 0 && (
-          <div className={addNewBlockButton} onClick={addNewBlock}>
+          <div data-testId="addNewBlockButton" className={addNewBlockButton} onClick={addNewBlock}>
             클릭해서 새로운 블록을 추가하세요
           </div>
         )}

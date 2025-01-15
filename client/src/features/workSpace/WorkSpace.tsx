@@ -81,9 +81,10 @@ export const WorkSpace = () => {
           handlePageUpdate={updatePage}
         />
         <div className={content}>
-          {visiblePages.map((page) => (
+          {visiblePages.map((page, idx) => (
             <Page
               key={page.id}
+              testKey={`page-${idx}`}
               {...page}
               handlePageSelect={selectPage}
               handlePageClose={closePage}

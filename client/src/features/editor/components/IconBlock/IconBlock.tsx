@@ -2,6 +2,7 @@ import { ElementType } from "@noctaCrdt/types/Interfaces";
 import { iconContainerStyle, iconStyle } from "./IconBlock.style";
 
 interface IconBlockProps {
+  testKey: string;
   type: ElementType;
   index: number | undefined;
   indent?: number;
@@ -10,6 +11,7 @@ interface IconBlockProps {
 }
 
 export const IconBlock = ({
+  testKey,
   type,
   index = 1,
   indent = 0,
@@ -48,5 +50,9 @@ export const IconBlock = ({
   const icon = getIcon();
   if (!icon) return null;
 
-  return <div className={iconContainerStyle}>{icon}</div>;
+  return (
+    <div data-testid={testKey} className={iconContainerStyle}>
+      {icon}
+    </div>
+  );
 };

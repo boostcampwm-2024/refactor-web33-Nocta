@@ -79,11 +79,17 @@ export const Modal = ({
             <div className={modalContent}>{children}</div>
             <div className={buttonContainer}>
               {secondaryButtonLabel && (
-                <TextButton onClick={secondaryButtonOnClick} variant="secondary">
+                <TextButton
+                  testKey="modalSecondaryButton"
+                  onClick={secondaryButtonOnClick}
+                  variant="secondary"
+                >
                   {secondaryButtonLabel}
                 </TextButton>
               )}
-              <TextButton onClick={primaryButtonOnClick}>{primaryButtonLabel}</TextButton>
+              <TextButton testKey="modalPrimaryButton" onClick={primaryButtonOnClick}>
+                {primaryButtonLabel}
+              </TextButton>
             </div>
           </motion.div>
         </div>
