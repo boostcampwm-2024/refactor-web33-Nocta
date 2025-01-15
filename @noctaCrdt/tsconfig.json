@@ -14,6 +14,6 @@
     "moduleResolution": "node", // 추가
     "target": "ES2021" // 추가
   },
-  "include": ["**/*.ts"],
+  "include": ["**/*.ts", "__tests__/**/*"],
   "exclude": ["node_modules", "dist"]
 }

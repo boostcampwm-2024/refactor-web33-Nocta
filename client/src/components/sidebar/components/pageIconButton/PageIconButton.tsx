@@ -1,4 +1,4 @@
-import { PageIconType } from "@noctaCrdt/Interfaces";
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { iconComponents, IconConfig } from "@constants/PageIconButton.config";
 import { IconBox } from "./PageIconButton.style";
 

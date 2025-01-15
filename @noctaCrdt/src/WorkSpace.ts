@@ -1,5 +1,5 @@
 import { Page } from "./Page";
-import { RemotePageUpdateOperation, WorkSpaceSerializedProps } from "./Interfaces";
+import { RemotePageUpdateOperation, WorkSpaceSerializedProps } from "./types/Interfaces";
 import { EditorCRDT } from "./Crdt";
 
 export class WorkSpace {

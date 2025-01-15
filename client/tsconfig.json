@@ -30,8 +30,8 @@
       "@utils/*": ["src/utils/*"],
       "@apis/*": ["src/apis/*"],
       "@stores/*": ["src/stores/*"],
-      "@noctaCrdt": ["../@noctaCrdt/dist"],
-      "@noctaCrdt/*": ["../@noctaCrdt/dist/*"]
+      "@noctaCrdt": ["../@noctaCrdt/src"],
+      "@noctaCrdt/*": ["../@noctaCrdt/src/*"]
     }
   },
   "references": [{ "path": "../@noctaCrdt" }],

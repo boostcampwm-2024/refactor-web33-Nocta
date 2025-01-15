@@ -1,7 +1,7 @@
-import { NodeId, BlockId, CharId } from "./NodeId";
-import { Block, Char } from "./Node";
-import { Page } from "./Page";
-import { EditorCRDT } from "./Crdt";
+import { NodeId, BlockId, CharId } from "../NodeId";
+import { Block, Char } from "../Node";
+import { Page } from "../Page";
+import { EditorCRDT } from "../Crdt";
 
 export type ElementType =
   | "p"

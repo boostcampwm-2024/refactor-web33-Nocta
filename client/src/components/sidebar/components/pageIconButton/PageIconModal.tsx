@@ -1,4 +1,4 @@
-import { PageIconType } from "@noctaCrdt/Interfaces";
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { RiCloseLine } from "react-icons/ri";
 import { iconGroups, iconComponents } from "@constants/PageIconButton.config";
 import { css } from "@styled-system/css";

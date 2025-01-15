@@ -15,7 +15,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"src/**/*.{ts,tsx}\" --fix",
-    "build:noctaCrdt": "pnpm --filter @noctaCrdt build",
+    "build:noctaCrdt": "pnpm --filter \"@noctaCrdt\" build",
     "test": "pnpm build:noctaCrdt && jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",

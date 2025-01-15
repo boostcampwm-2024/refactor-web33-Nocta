@@ -1,5 +1,5 @@
-import { TextColorType, BackgroundColorType } from "@noctaCrdt/Interfaces";
 import { Block } from "@noctaCrdt/Node";
+import { TextColorType, BackgroundColorType } from "@noctaCrdt/types/Interfaces";
 import { COLOR } from "@src/constants/color";
 import { css } from "styled-system/css";
 

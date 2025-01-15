@@ -1,4 +1,4 @@
-import { PageIconType } from "@noctaCrdt/Interfaces";
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { iconComponents } from "@src/constants/PageIconButton.config";
 import { pageTitleContainer, pageTitle } from "./PageTitle.style";
 

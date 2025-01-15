@@ -1,4 +1,4 @@
-import { BackgroundColorType } from "@noctaCrdt/Interfaces";
+import { BackgroundColorType } from "@noctaCrdt/types/Interfaces";
 import {
   backgroundColorIndicator,
   colorOptionButton,

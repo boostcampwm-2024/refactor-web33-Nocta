@@ -1,13 +1,13 @@
 import { useSortable } from "@dnd-kit/sortable";
+import { Block as CRDTBlock, Char } from "@noctaCrdt/Node";
+import { BlockId } from "@noctaCrdt/NodeId";
 import {
   AnimationType,
   ElementType,
   TextColorType,
   TextStyleType,
   BackgroundColorType,
-} from "@noctaCrdt/Interfaces";
-import { Block as CRDTBlock, Char } from "@noctaCrdt/Node";
-import { BlockId } from "@noctaCrdt/NodeId";
+} from "@noctaCrdt/types/Interfaces";
 import { motion } from "framer-motion";
 import { memo, useEffect, useRef, useState } from "react";
 import { useModal } from "@src/components/modal/useModal";

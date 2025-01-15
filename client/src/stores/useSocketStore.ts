@@ -13,7 +13,7 @@ import {
   CursorPosition,
   WorkSpaceSerializedProps,
   WorkspaceListItem,
-} from "@noctaCrdt/Interfaces";
+} from "@noctaCrdt/types/Interfaces";
 import { io, Socket } from "socket.io-client";
 import { create } from "zustand";
 import { useToastStore } from "./useToastStore";

@@ -1,4 +1,4 @@
-import { PageIconType } from "@noctaCrdt/Interfaces";
+import { PageIconType } from "@noctaCrdt/types/Interfaces";
 import { IconType } from "react-icons";
 import { CgGym } from "react-icons/cg";
 import { MdOutlinePlace } from "react-icons/md";

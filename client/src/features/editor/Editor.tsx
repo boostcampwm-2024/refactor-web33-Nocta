@@ -3,7 +3,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { EditorCRDT } from "@noctaCrdt/Crdt";
 import { BlockLinkedList } from "@noctaCrdt/LinkedList";
 import { Block as CRDTBlock } from "@noctaCrdt/Node";
-import { serializedEditorDataProps } from "node_modules/@noctaCrdt/Interfaces.ts";
+import { serializedEditorDataProps } from "@noctaCrdt/types/Interfaces";
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore.ts";
 import { setCaretPosition, getAbsoluteCaretPosition } from "@src/utils/caretUtils.ts";

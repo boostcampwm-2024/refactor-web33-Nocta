@@ -4,8 +4,12 @@ module.exports = {
   mode: "development",
   resolve: {
     extensions: [".ts", ".js"],
+    modules: [
+      path.resolve(__dirname, ".."), // 상위 디렉토리도 모듈 검색 경로에 추가
+      "node_modules",
+    ],
     alias: {
-      "@noctaCrdt": path.resolve(__dirname, "../@noctaCrdt/dist"),
+      "@noctaCrdt": path.resolve(process.cwd(), "../@noctaCrdt/dist/src"),
     },
   },
   module: {

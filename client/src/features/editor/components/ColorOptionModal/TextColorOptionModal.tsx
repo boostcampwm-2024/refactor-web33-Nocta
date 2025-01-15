@@ -1,4 +1,4 @@
-import { TextColorType } from "@noctaCrdt/Interfaces";
+import { TextColorType } from "@noctaCrdt/types/Interfaces";
 import {
   colorOptionButton,
   colorPaletteContainer,

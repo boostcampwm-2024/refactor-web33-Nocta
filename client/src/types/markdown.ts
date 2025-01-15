@@ -1,4 +1,4 @@
-import { ElementType } from "@noctaCrdt/Interfaces";
+import { ElementType } from "@noctaCrdt/types/Interfaces";
 
 export interface MarkdownElement {
   type: ElementType;

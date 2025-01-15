@@ -1,5 +1,5 @@
-import { TextColorType, BackgroundColorType } from "@noctaCrdt/Interfaces";
 import { Char } from "@noctaCrdt/Node";
+import { TextColorType, BackgroundColorType } from "@noctaCrdt/types/Interfaces";
 import { motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

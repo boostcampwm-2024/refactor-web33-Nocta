@@ -4,7 +4,7 @@ import { Workspace, WorkspaceDocument } from "./schemas/workspace.schema";
 import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/WorkSpace";
 import { Model } from "mongoose";
 import { Server } from "socket.io";
-import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/Interfaces";
+import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/types/Interfaces";
 import { Page } from "@noctaCrdt/Page";
 import { Block } from "@noctaCrdt/Node";
 import { BlockId } from "@noctaCrdt/NodeId";
@@ -59,7 +59,8 @@ export class WorkSpaceService implements OnModuleInit {
         const clientCount = room ? room.size : 0;
         // 연결된 클라이언트가 없으면 DB에 저장하고 메모리에서 제거
         if (clientCount === 0) {
-          const serializedData = workspace.serialize();
+          const newWorkspace = await this.clearDeletedObject(workspace);
+          const serializedData = newWorkspace.serialize();
           // 스키마에 맞게 데이터 변환
           const workspaceData = {
             id: roomId,
@@ -90,6 +91,18 @@ export class WorkSpaceService implements OnModuleInit {
     } catch (error) {
       console.error("Error during workspace cleanup: ", error);
     }
+  }
+
+  async clearDeletedObject(workspace: CRDTWorkSpace): Promise<CRDTWorkSpace> {
+    const newWorkspace = workspace;
+    newWorkspace.pageList.forEach((page) => {
+      page.crdt.LinkedList.spread().forEach((block) => {
+        if (block.deleted) return;
+        block.crdt.LinkedList.clearDeletedNode();
+      });
+      page.crdt.LinkedList.clearDeletedNode();
+    });
+    return newWorkspace;
   }
 
   async getWorkspace(workspaceId: string): Promise<CRDTWorkSpace> {

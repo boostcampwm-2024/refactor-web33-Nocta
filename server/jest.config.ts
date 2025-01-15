@@ -1,4 +1,5 @@
 import type { Config } from "jest";
+import path from "path"; // require 대신 import 사용
 
 const config: Config = {
   moduleFileExtensions: ["js", "json", "ts"],
@@ -21,10 +22,11 @@ const config: Config = {
   transformIgnorePatterns: ["/node_modules/(?!(nanoid)/)", "/node_modules/(?!@noctaCrdt)"],
   extensionsToTreatAsEsm: [".ts"],
   moduleNameMapper: {
-    "^@noctaCrdt$": "<rootDir>/../@noctaCrdt/dist/Crdt.js",
-    "^@noctaCrdt/(.*)$": "<rootDir>/../@noctaCrdt/dist/$1.js",
+    "^@noctaCrdt$": "<rootDir>/../@noctaCrdt/dist/src/Crdt.js",
+    "^@noctaCrdt/(.*)$": path.join(__dirname, "../@noctaCrdt/dist/src/$1"),
     "^nanoid$": require.resolve("nanoid"),
   },
+  modulePaths: [path.join(__dirname, ".."), "node_modules"],
 };
 
 export default config;
