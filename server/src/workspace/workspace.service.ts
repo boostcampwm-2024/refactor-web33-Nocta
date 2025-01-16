@@ -52,7 +52,10 @@ export class WorkSpaceService implements OnModuleInit {
       const bulkOps = [];
       for (const [roomId, workspace] of this.workspaces.entries()) {
         // guest workspace는 제외
-        if (roomId === "guest") continue;
+        if (roomId === "guest") {
+          await this.clearDeletedObject(workspace);
+          continue;
+        }
 
         // room의 연결된 클라이언트 수 확인
         const room = this.server.sockets.adapter.rooms.get(roomId);
