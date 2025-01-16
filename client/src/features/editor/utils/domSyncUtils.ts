@@ -61,18 +61,22 @@ const getClassNames = (state: TextStyleState): string => {
 
 export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
   const chars = block.crdt.LinkedList.spread();
+  // 캐럿 위치 정보 저장
+  const selection = window.getSelection();
+  const range = selection?.getRangeAt(0);
+  let caretNode = range?.startContainer;
+  const caretOffset = range?.startOffset;
+
   if (chars.length === 0) {
-    element.innerHTML = "";
+    while (element.firstChild) {
+      element.removeChild(element.firstChild);
+    }
     return;
   }
 
-  // 각 위치별 모든 적용된 스타일을 추적
   const positionStyles: TextStyleState[] = chars.map((char) => {
     const styleSet = new Set<string>();
-
-    // 현재 문자의 스타일 수집
     char.style.forEach((style) => styleSet.add(TEXT_STYLES[style]));
-
     return {
       styles: styleSet,
       color: char.color,
@@ -80,54 +84,185 @@ export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
     };
   });
 
-  let html = "";
+  const fragment = document.createDocumentFragment();
+  let currentSpan: HTMLSpanElement | null = null;
   let currentState: TextStyleState = {
     styles: new Set<string>(),
     color: "black",
     backgroundColor: "transparent",
   };
-  let spanOpen = false;
+
+  // 캐럿이 있던 노드의 텍스트 내용과 오프셋 저장
+  // const caretNodeText = caretNode?.textContent || "";
 
   chars.forEach((char, index) => {
     const targetState = positionStyles[index];
+    const hasStyles =
+      targetState.styles.size > 0 ||
+      targetState.color !== "black" ||
+      targetState.backgroundColor !== "transparent";
 
-    // 스타일, 색상, 배경색 변경 확인
-    const styleChanged =
-      !setsEqual(currentState.styles, targetState.styles) ||
-      currentState.color !== targetState.color ||
-      currentState.backgroundColor !== targetState.backgroundColor;
+    if (hasStyles) {
+      const styleChanged =
+        !setsEqual(currentState.styles, targetState.styles) ||
+        currentState.color !== targetState.color ||
+        currentState.backgroundColor !== targetState.backgroundColor;
 
-    // 변경되었으면 현재 span 태그 닫기
-    if (styleChanged && spanOpen) {
-      html += "</span>";
-      spanOpen = false;
-    }
+      if (styleChanged || !currentSpan) {
+        currentSpan = document.createElement("span");
+        currentSpan.className = getClassNames(targetState);
+        currentSpan.style.whiteSpace = "pre";
+        fragment.appendChild(currentSpan);
+        currentState = targetState;
+      }
 
-    // 새로운 스타일 조합으로 span 태그 열기
-    if (styleChanged) {
-      const className = getClassNames(targetState);
-      html += `<span class="${className}" style="white-space: pre;">`;
-      spanOpen = true;
-    }
-
-    // 텍스트 추가
-    html += sanitizeText(char.value);
-
-    // 다음 문자로 넘어가기 전에 현재 상태 업데이트
-    currentState = targetState;
-
-    // 마지막 문자이고 span이 열려있으면 닫기
-    if (index === chars.length - 1 && spanOpen) {
-      html += "</span>";
-      spanOpen = false;
+      const textNode = document.createTextNode(sanitizeText(char.value));
+      currentSpan.appendChild(textNode);
+    } else {
+      currentSpan = null;
+      const textNode = document.createTextNode(sanitizeText(char.value));
+      fragment.appendChild(textNode);
     }
   });
 
-  // DOM 업데이트
-  if (element.innerHTML !== html) {
-    element.innerHTML = html;
+  // DOM 업데이트를 위한 노드 비교 및 변경
+  const existingNodes = Array.from(element.childNodes);
+  const newNodes = Array.from(fragment.childNodes);
+  let i = 0;
+
+  // 공통 길이만큼 업데이트 또는 재사용
+  const minLength = Math.min(existingNodes.length, newNodes.length);
+  for (; i < minLength; i++) {
+    if (!nodesAreEqual(existingNodes[i], newNodes[i])) {
+      if (caretNode === existingNodes[i]) {
+        // 캐럿이 있던 노드가 교체되는 경우, 새 노드에서 동일한 텍스트 위치 찾기
+        caretNode = newNodes[i];
+      }
+      element.replaceChild(newNodes[i], existingNodes[i]);
+    }
   }
+
+  // 남은 새 노드 추가
+  for (; i < newNodes.length; i++) {
+    element.appendChild(newNodes[i]);
+  }
+
+  // 남은 기존 노드 제거
+  while (i < existingNodes.length) {
+    if (caretNode === existingNodes[i]) {
+      // 캐럿이 있던 노드가 제거되는 경우
+      caretNode = undefined;
+    }
+    element.removeChild(existingNodes[i]);
+    i += 1;
+  }
+
+  // 캐럿 위치 복원
+  // if (caretNode && typeof caretOffset === "number" && selection) {
+  //   try {
+  //     // 새로운 노드에서 캐럿 위치 설정
+  //     const newRange = document.createRange();
+  //     const newOffset = Math.min(caretOffset, caretNode.textContent?.length || 0);
+  //     newRange.setStart(caretNode, newOffset);
+  //     newRange.collapse(true);
+  //     selection.removeAllRanges();
+  //     selection.addRange(newRange);
+  //   } catch (error) {
+  //     console.error("Error restoring caret position:", error);
+  //   }
+  // }
 };
+
+const nodesAreEqual = (node1: Node, node2: Node): boolean => {
+  if (node1.nodeType !== node2.nodeType) return false;
+
+  if (node1.nodeType === Node.TEXT_NODE) {
+    return node1.textContent === node2.textContent;
+  }
+
+  if (node1.nodeType === Node.ELEMENT_NODE) {
+    const elem1 = node1 as HTMLElement;
+    const elem2 = node2 as HTMLElement;
+    return (
+      elem1.tagName === elem2.tagName &&
+      elem1.className === elem2.className &&
+      elem1.getAttribute("style") === elem2.getAttribute("style") &&
+      elem1.textContent === elem2.textContent
+    );
+  }
+
+  return false;
+};
+
+// export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
+//   const chars = block.crdt.LinkedList.spread();
+//   if (chars.length === 0) {
+//     element.innerHTML = "";
+//     return;
+//   }
+
+//   // 각 위치별 모든 적용된 스타일을 추적
+//   const positionStyles: TextStyleState[] = chars.map((char) => {
+//     const styleSet = new Set<string>();
+
+//     // 현재 문자의 스타일 수집
+//     char.style.forEach((style) => styleSet.add(TEXT_STYLES[style]));
+
+//     return {
+//       styles: styleSet,
+//       color: char.color,
+//       backgroundColor: char.backgroundColor,
+//     };
+//   });
+
+//   let html = "";
+//   let currentState: TextStyleState = {
+//     styles: new Set<string>(),
+//     color: "black",
+//     backgroundColor: "transparent",
+//   };
+//   let spanOpen = false;
+
+//   chars.forEach((char, index) => {
+//     const targetState = positionStyles[index];
+
+//     // 스타일, 색상, 배경색 변경 확인
+//     const styleChanged =
+//       !setsEqual(currentState.styles, targetState.styles) ||
+//       currentState.color !== targetState.color ||
+//       currentState.backgroundColor !== targetState.backgroundColor;
+
+//     // 변경되었으면 현재 span 태그 닫기
+//     if (styleChanged && spanOpen) {
+//       html += "</span>";
+//       spanOpen = false;
+//     }
+
+//     // 새로운 스타일 조합으로 span 태그 열기
+//     if (styleChanged) {
+//       const className = getClassNames(targetState);
+//       html += `<span class="${className}" style="white-space: pre;">`;
+//       spanOpen = true;
+//     }
+
+//     // 텍스트 추가
+//     html += sanitizeText(char.value);
+
+//     // 다음 문자로 넘어가기 전에 현재 상태 업데이트
+//     currentState = targetState;
+
+//     // 마지막 문자이고 span이 열려있으면 닫기
+//     if (index === chars.length - 1 && spanOpen) {
+//       html += "</span>";
+//       spanOpen = false;
+//     }
+//   });
+
+//   // DOM 업데이트
+//   if (element.innerHTML !== html) {
+//     element.innerHTML = html;
+//   }
+// };
 
 // Set 비교 헬퍼 함수
 const setsEqual = (a: Set<string>, b: Set<string>): boolean => {

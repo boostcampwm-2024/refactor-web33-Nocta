@@ -11,6 +11,7 @@ import {
 import { motion } from "framer-motion";
 import { memo, useEffect, useRef, useState } from "react";
 import { useModal } from "@src/components/modal/useModal";
+import { textStyles } from "@src/styles/typography";
 import { getAbsoluteCaretPosition } from "@src/utils/caretUtils";
 import { useBlockAnimation } from "../../hooks/useBlockAnimtaion";
 import { setInnerHTML, getTextOffset } from "../../utils/domSyncUtils";
@@ -106,6 +107,11 @@ export const Block: React.FC<BlockProps> = memo(
           block,
         },
       });
+    const [textStyle, setTextStyle] = useState<string>(
+      block.crdt.LinkedList.spread()
+        .map((char) => char.style)
+        .join(""),
+    );
 
     // 현재 드래그 중인 부모 블록의 indent 확인
     const isChildOfDragging = dragBlockList.some((item) => item === data.id);
@@ -266,11 +272,32 @@ export const Block: React.FC<BlockProps> = memo(
       />
     );
 
+    const getTextAndStylesHash = (block: CRDTBlock) => {
+      const chars = block.crdt.LinkedList.spread();
+      return JSON.stringify(
+        chars.map((char) => ({
+          value: char.value,
+          style: char.style,
+          color: char.color,
+          backgroundColor: char.backgroundColor,
+        })),
+      );
+    };
+
     useEffect(() => {
       if (blockRef.current) {
+        console.log(block.crdt.serialize());
         setInnerHTML({ element: blockRef.current, block });
       }
-    }, [block.crdt.serialize()]);
+    }, [getTextAndStylesHash(block)]);
+
+    // useEffect(() => {
+    //   console.log(block.crdt);
+    //   if (blockRef.current) {
+    //     console.log(block.crdt.LinkedList.spread());
+    //     setInnerHTML({ element: blockRef.current, block });
+    //   }
+    // }, [block.crdt.serialize()]);
 
     return (
       // TODO: eslint 규칙을 수정해야 할까?
