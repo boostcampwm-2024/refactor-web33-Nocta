@@ -8,9 +8,6 @@ export const pageControlContainer = css({
       opacity: 1,
     },
   },
-  "& svg": {
-    transform: "scale(1)",
-  },
 });
 
 export const pageControlButton = cva({
