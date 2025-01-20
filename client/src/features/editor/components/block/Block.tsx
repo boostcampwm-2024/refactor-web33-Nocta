@@ -107,11 +107,6 @@ export const Block: React.FC<BlockProps> = memo(
           block,
         },
       });
-    const [textStyle, setTextStyle] = useState<string>(
-      block.crdt.LinkedList.spread()
-        .map((char) => char.style)
-        .join(""),
-    );
 
     // 현재 드래그 중인 부모 블록의 indent 확인
     const isChildOfDragging = dragBlockList.some((item) => item === data.id);
