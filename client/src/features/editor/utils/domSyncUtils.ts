@@ -58,14 +58,11 @@ const getClassNames = (state: TextStyleState): string => {
 
   return css(baseStyles);
 };
-
 export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
   const chars = block.crdt.LinkedList.spread();
-  // 캐럿 위치 정보 저장
   const selection = window.getSelection();
   const range = selection?.getRangeAt(0);
   let caretNode = range?.startContainer;
-  const caretOffset = range?.startOffset;
 
   if (chars.length === 0) {
     while (element.firstChild) {
@@ -74,58 +71,70 @@ export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
     return;
   }
 
-  const positionStyles: TextStyleState[] = chars.map((char) => {
-    const styleSet = new Set<string>();
-    char.style.forEach((style) => styleSet.add(TEXT_STYLES[style]));
-    return {
-      styles: styleSet,
-      color: char.color,
-      backgroundColor: char.backgroundColor,
-    };
-  });
-
   const fragment = document.createDocumentFragment();
   let currentSpan: HTMLSpanElement | null = null;
+  let currentText = "";
   let currentState: TextStyleState = {
     styles: new Set<string>(),
     color: "black",
     backgroundColor: "transparent",
   };
 
-  // 캐럿이 있던 노드의 텍스트 내용과 오프셋 저장
-  // const caretNodeText = caretNode?.textContent || "";
+  const hasStylesApplied = (state: TextStyleState): boolean => {
+    return (
+      state.styles.size > 0 || state.color !== "black" || state.backgroundColor !== "transparent"
+    );
+  };
 
-  chars.forEach((char, index) => {
-    const targetState = positionStyles[index];
-    const hasStyles =
-      targetState.styles.size > 0 ||
-      targetState.color !== "black" ||
-      targetState.backgroundColor !== "transparent";
+  const flushCurrentText = () => {
+    if (!currentText) return;
 
-    if (hasStyles) {
-      const styleChanged =
-        !setsEqual(currentState.styles, targetState.styles) ||
-        currentState.color !== targetState.color ||
-        currentState.backgroundColor !== targetState.backgroundColor;
+    // 현재 스타일이 적용된 상태라면 span으로 감싸서 추가
+    if (hasStylesApplied(currentState) && currentSpan) {
+      currentSpan.appendChild(document.createTextNode(sanitizeText(currentText)));
+      fragment.appendChild(currentSpan);
+    } else {
+      // 스타일이 없다면 일반 텍스트 노드로 추가
+      fragment.appendChild(document.createTextNode(sanitizeText(currentText)));
+    }
+    currentText = "";
+    currentSpan = null;
+  };
 
-      if (styleChanged || !currentSpan) {
+  chars.forEach((char) => {
+    const targetState = {
+      styles: new Set(char.style.map((style) => TEXT_STYLES[style])),
+      color: char.color,
+      backgroundColor: char.backgroundColor,
+    };
+
+    const styleChanged =
+      !setsEqual(currentState.styles, targetState.styles) ||
+      currentState.color !== targetState.color ||
+      currentState.backgroundColor !== targetState.backgroundColor;
+
+    // 스타일이 변경되었다면 현재까지의 텍스트를 처리
+    if (styleChanged) {
+      flushCurrentText();
+
+      // 새로운 스타일 상태 설정
+      currentState = targetState;
+
+      // 새로운 스타일이 있는 경우에만 span 생성
+      if (hasStylesApplied(targetState)) {
         currentSpan = document.createElement("span");
         currentSpan.className = getClassNames(targetState);
         currentSpan.style.whiteSpace = "pre";
-        fragment.appendChild(currentSpan);
-        currentState = targetState;
       }
-
-      const textNode = document.createTextNode(sanitizeText(char.value));
-      currentSpan.appendChild(textNode);
-    } else {
-      currentSpan = null;
-      const textNode = document.createTextNode(sanitizeText(char.value));
-      fragment.appendChild(textNode);
     }
+
+    currentText += char.value;
   });
 
-  // DOM 업데이트를 위한 노드 비교 및 변경
+  // 마지막 텍스트 처리
+  flushCurrentText();
+
+  // DOM 업데이트 로직
   const existingNodes = Array.from(element.childNodes);
   const newNodes = Array.from(fragment.childNodes);
   let i = 0;
@@ -156,21 +165,6 @@ export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
     element.removeChild(existingNodes[i]);
     i += 1;
   }
-
-  // 캐럿 위치 복원
-  // if (caretNode && typeof caretOffset === "number" && selection) {
-  //   try {
-  //     // 새로운 노드에서 캐럿 위치 설정
-  //     const newRange = document.createRange();
-  //     const newOffset = Math.min(caretOffset, caretNode.textContent?.length || 0);
-  //     newRange.setStart(caretNode, newOffset);
-  //     newRange.collapse(true);
-  //     selection.removeAllRanges();
-  //     selection.addRange(newRange);
-  //   } catch (error) {
-  //     console.error("Error restoring caret position:", error);
-  //   }
-  // }
 };
 
 const nodesAreEqual = (node1: Node, node2: Node): boolean => {
