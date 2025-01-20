@@ -11,7 +11,6 @@ import {
 import { motion } from "framer-motion";
 import { memo, useEffect, useRef, useState } from "react";
 import { useModal } from "@src/components/modal/useModal";
-import { textStyles } from "@src/styles/typography";
 import { getAbsoluteCaretPosition } from "@src/utils/caretUtils";
 import { useBlockAnimation } from "../../hooks/useBlockAnimtaion";
 import { setInnerHTML, getTextOffset } from "../../utils/domSyncUtils";
