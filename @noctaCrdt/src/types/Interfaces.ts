@@ -66,6 +66,23 @@ export type PageIconType =
 
 export type TextColorType = Exclude<BackgroundColorType, "transparent">;
 
+export type CRDTOperation =
+  | RemoteBlockInsertOperation
+  | RemoteBlockDeleteOperation
+  | RemoteBlockUpdateOperation
+  | RemoteBlockReorderOperation
+  | RemoteBlockCheckboxOperation
+  | RemoteCharInsertOperation
+  | RemoteCharDeleteOperation
+  | RemoteCharUpdateOperation;
+
+export type Operation =
+  | RemotePageCreateOperation
+  | RemotePageDeleteOperation
+  | RemotePageUpdateOperation
+  | CRDTOperation
+  | CursorPosition;
+
 export interface InsertOperation {
   type: "insert";
   node: Block | Char;
