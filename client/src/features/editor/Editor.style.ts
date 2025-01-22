@@ -12,14 +12,6 @@ export const editorContainer = css({
   },
 });
 
-export const editorTitleContainer = css({
-  display: "flex",
-  gap: "4px",
-  flexDirection: "column",
-  width: "full",
-  padding: "spacing.sm",
-});
-
 export const editorTitle = css({
   textStyle: "display-medium28",
   outline: "none",
