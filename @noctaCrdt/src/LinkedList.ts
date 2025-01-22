@@ -278,12 +278,18 @@ export class BlockLinkedList extends LinkedList<Block> {
     let currentIndex = 1;
 
     while (currentNode) {
-      if (currentNode.deleted) {
-        currentNode = currentNode.next ? this.getNode(currentNode.next) : null;
-        continue;
-      }
       if (currentNode.type === "ol") {
-        const prevNode = currentNode.prev ? this.getNode(currentNode.prev) : null;
+        let prevNode = currentNode.prev ? this.getNode(currentNode.prev) : null;
+
+        // tombstone 노드를 건너뛰는 로직
+        while (prevNode && prevNode.deleted) {
+          // 이전 노드의 prev를 다시 추적
+          if (prevNode.prev) {
+            prevNode = this.getNode(prevNode.prev);
+          } else {
+            prevNode = null;
+          }
+        }
 
         if (!prevNode || prevNode.type !== "ol") {
           // 이전 노드가 없거나 ol이 아닌 경우 1부터 시작
