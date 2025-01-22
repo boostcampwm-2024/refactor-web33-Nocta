@@ -4,7 +4,11 @@ import { Workspace, WorkspaceDocument } from "./schemas/workspace.schema";
 import { WorkSpace as CRDTWorkSpace } from "@noctaCrdt/WorkSpace";
 import { Model } from "mongoose";
 import { Server } from "socket.io";
-import { WorkSpaceSerializedProps, WorkspaceListItem } from "@noctaCrdt/types/Interfaces";
+import {
+  CRDTOperation,
+  WorkSpaceSerializedProps,
+  WorkspaceListItem,
+} from "@noctaCrdt/types/Interfaces";
 import { Page } from "@noctaCrdt/Page";
 import { Block } from "@noctaCrdt/Node";
 import { BlockId } from "@noctaCrdt/NodeId";
@@ -13,7 +17,7 @@ import { User, UserDocument } from "../auth/schemas/user.schema";
 @Injectable()
 export class WorkSpaceService implements OnModuleInit {
   private readonly logger = new Logger(WorkSpaceService.name);
-  private workspaces: Map<string, CRDTWorkSpace>;
+  private operationStore: Map<string, CRDTOperation[]>;
   private server: Server;
   constructor(
     @InjectModel(Workspace.name) private workspaceModel: Model<WorkspaceDocument>,
@@ -30,70 +34,25 @@ export class WorkSpaceService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    this.workspaces = new Map();
-    // 게스트 워크스페이스 초기화
-    const guestWorkspace = new CRDTWorkSpace("guest", "Guest");
-    this.workspaces.set("guest", guestWorkspace);
+    this.operationStore = new Map();
+
+    const guestWorkspaceJSON = await this.workspaceModel.findOne({ id: "guest" });
+    if (!guestWorkspaceJSON) {
+      const guestWorkspace = await this.workspaceModel.create({
+        id: "guest",
+        name: "Guest Workspace",
+        authUser: { ["guest"]: "owner" },
+      });
+      this.userModel.updateOne({ id: "guest" }, { $push: { workspaces: guestWorkspace.id } });
+    }
 
     // 주기적으로 인메모리 DB 정리 작업 실행
     setInterval(
       () => {
-        this.cleanupWorkspaces();
+        this.makeSnapshot();
       },
-      process.env.NODE_ENV === "production" ? 1 * 60 * 60 * 1000 : 30 * 1000,
+      process.env.NODE_ENV === "production" ? 10 * 60 * 1000 : 30 * 1000,
     );
-  }
-
-  /**
-   * 인메모리 DB에서 연결된 클라이언트가 없는 워크스페이스 정리
-   */
-  private async cleanupWorkspaces() {
-    try {
-      const bulkOps = [];
-      for (const [roomId, workspace] of this.workspaces.entries()) {
-        // guest workspace는 제외
-        if (roomId === "guest") {
-          await this.clearDeletedObject(workspace);
-          continue;
-        }
-
-        // room의 연결된 클라이언트 수 확인
-        const room = this.server.sockets.adapter.rooms.get(roomId);
-        const clientCount = room ? room.size : 0;
-        // 연결된 클라이언트가 없으면 DB에 저장하고 메모리에서 제거
-        if (clientCount === 0) {
-          const newWorkspace = await this.clearDeletedObject(workspace);
-          const serializedData = newWorkspace.serialize();
-          // 스키마에 맞게 데이터 변환
-          const workspaceData = {
-            id: roomId,
-            name: workspace.name,
-            pageList: serializedData.pageList,
-            authUser: serializedData.authUser,
-            updatedAt: new Date(),
-          };
-          bulkOps.push({
-            updateOne: {
-              filter: { id: roomId },
-              update: { $set: workspaceData },
-              upsert: true,
-            },
-          });
-          this.workspaces.delete(roomId);
-          this.logger.log(`Workspace ${roomId} will be saved to DB and removed from memory`);
-        }
-      }
-      // DB에 저장할 작업이 있으면 한 번에 실행
-      if (bulkOps.length > 0) {
-        await this.workspaceModel.bulkWrite(bulkOps, { ordered: false });
-      }
-
-      this.logger.log(
-        `Workspace cleanup completed, current workspaces: ${[...this.workspaces.keys()]}`,
-      );
-    } catch (error) {
-      console.error("Error during workspace cleanup: ", error);
-    }
   }
 
   async clearDeletedObject(workspace: CRDTWorkSpace): Promise<CRDTWorkSpace> {
@@ -109,12 +68,6 @@ export class WorkSpaceService implements OnModuleInit {
   }
 
   async getWorkspace(workspaceId: string): Promise<CRDTWorkSpace> {
-    // 인메모리에서 먼저 찾기
-    const cachedWorkspace = this.workspaces.get(workspaceId);
-    if (cachedWorkspace) {
-      return cachedWorkspace;
-    }
-
     // DB에서 찾기
     const workspaceJSON = await this.workspaceModel.findOne({ id: workspaceId });
 
@@ -132,9 +85,26 @@ export class WorkSpaceService implements OnModuleInit {
       } as WorkSpaceSerializedProps);
     }
 
-    // 메모리에 캐시하고 반환
-    this.workspaces.set(workspaceId, workspace);
     return workspace;
+  }
+
+  async updateWorkspace(workspace: CRDTWorkSpace) {
+    const serializedData = workspace.serialize();
+
+    // 스키마에 맞게 데이터 변환
+    const workspaceData = {
+      id: serializedData.id,
+      name: workspace.name,
+      pageList: serializedData.pageList,
+      authUser: serializedData.authUser,
+      updatedAt: new Date(),
+    };
+
+    await this.workspaceModel.updateOne(
+      { id: workspaceData.id },
+      { $set: workspaceData },
+      { upsert: true },
+    );
   }
 
   async getPage(workspaceId: string, pageId: string): Promise<Page> {
@@ -312,5 +282,145 @@ export class WorkSpaceService implements OnModuleInit {
         { $addToSet: { workspaces: workspaceId } },
       );
     }
+  }
+
+  storeOperation(workspaceId: string, operation: CRDTOperation): void {
+    if (!this.operationStore.has(workspaceId)) {
+      this.operationStore.set(workspaceId, []);
+    }
+    this.operationStore.get(workspaceId).push(operation);
+  }
+
+  async playOperationToPage(page: Page, operation: CRDTOperation): Promise<void> {
+    try {
+      switch (operation.type) {
+        case "blockInsert":
+          page.crdt.remoteInsert(operation);
+          break;
+        case "blockUpdate":
+          page.crdt.remoteUpdate(operation.node, operation.pageId);
+          page.crdt.LinkedList.updateAllOrderedListIndices();
+          break;
+        case "blockDelete":
+          page.crdt.remoteDelete(operation);
+          page.crdt.LinkedList.updateAllOrderedListIndices();
+          break;
+        case "blockReorder":
+          page.crdt.remoteReorder(operation);
+          page.crdt.LinkedList.updateAllOrderedListIndices();
+          break;
+        case "blockCheckbox":
+          page.crdt.LinkedList.nodeMap[JSON.stringify(operation.blockId)].isChecked =
+            operation.isChecked;
+          break;
+        case "charInsert":
+          page.crdt.LinkedList.nodeMap[JSON.stringify(operation.blockId)].crdt.remoteInsert(
+            operation,
+          );
+          break;
+        case "charDelete":
+          page.crdt.LinkedList.nodeMap[JSON.stringify(operation.blockId)].crdt.remoteDelete(
+            operation,
+          );
+          break;
+        case "charUpdate":
+          page.crdt.LinkedList.nodeMap[JSON.stringify(operation.blockId)].crdt.remoteUpdate(
+            operation,
+          );
+          break;
+        default:
+          this.logger.warn("연산 처리 중 알 수 없는 연산 발견:", operation);
+      }
+    } catch (error) {
+      this.logger.warn("유효하지 않은 연산:", operation);
+    }
+  }
+
+  async playOperationToWorkspace(
+    workspace: CRDTWorkSpace,
+    operation: CRDTOperation,
+  ): Promise<void> {
+    this.playOperationToPage(
+      workspace.pageList.find((page) => page.id === operation.pageId),
+      operation,
+    );
+  }
+
+  async playAllOperations(workspace: CRDTWorkSpace, operations: CRDTOperation[]): Promise<void> {
+    await Promise.all(
+      operations.map(async (operation) => {
+        this.playOperationToWorkspace(workspace, operation);
+      }),
+    );
+  }
+
+  async updatePage(workspaceId: string, pageId: string) {
+    const page = await this.getPage(workspaceId, pageId);
+    if (!page) {
+      throw new Error(`Page with id ${pageId} not found`);
+    }
+
+    const operations = this.operationStore.get(workspaceId) || [];
+    const pageOperations = operations.filter((op) => op.pageId === pageId);
+
+    for (const operation of pageOperations) {
+      await this.playOperationToPage(page, operation);
+    }
+
+    return page;
+  }
+
+  async makeSnapshot(): Promise<void> {
+    const bulkOps = [];
+    const tasks = [];
+
+    this.operationStore.forEach((operations, workspaceId) => {
+      tasks.push(
+        (async () => {
+          // DB에서 찾기
+          const workspaceJSON = await this.workspaceModel.findOne({ id: workspaceId });
+          if (!workspaceJSON) {
+            throw new Error(`workspaceJson ${workspaceId} not found`);
+          }
+
+          const workspace = new CRDTWorkSpace();
+          workspace.deserialize({
+            id: workspaceJSON.id,
+            pageList: workspaceJSON.pageList,
+            authUser: workspaceJSON.authUser,
+          } as WorkSpaceSerializedProps);
+
+          await this.playAllOperations(workspace, operations);
+
+          const newWorkspace = await this.clearDeletedObject(workspace);
+          const serializedData = newWorkspace.serialize();
+          const workspaceData = {
+            id: workspaceId,
+            name: workspace.name,
+            pageList: serializedData.pageList,
+            authUser: serializedData.authUser,
+            updatedAt: new Date(),
+          };
+
+          bulkOps.push({
+            updateOne: {
+              filter: { id: workspaceId },
+              update: { $set: workspaceData },
+              upsert: true,
+            },
+          });
+        })(),
+      );
+    });
+
+    // 모든 작업이 끝날 때까지 대기
+    await Promise.all(tasks);
+
+    if (bulkOps.length > 0) {
+      await this.workspaceModel.bulkWrite(bulkOps, { ordered: false });
+    }
+
+    this.operationStore.clear();
+    this.logger.log(`Snapshot 저장 완료`);
   }
 }
