@@ -12,7 +12,7 @@ export const pageSkeletonContainer = cx(
   glassContainer({ border: "lg" }),
   css({
     display: "flex",
-    position: "relative",
+    position: "absolute",
     flexDirection: "column",
     border: "2px dashed gray",
     borderRadius: "24px",
