@@ -4,7 +4,6 @@ const baseBlockStyle = {
   display: "flex",
   flexDirection: "row",
   alignItems: "center",
-  position: "relative",
   width: "full",
   minHeight: "16px",
   backgroundColor: "transparent",
