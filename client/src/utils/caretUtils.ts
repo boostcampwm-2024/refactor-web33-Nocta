@@ -85,15 +85,12 @@ export const setCaretPosition = ({
 
     const currentPage = document.getElementById(pageId);
 
-    const blockElements = Array.from(
-      currentPage?.querySelectorAll('.d_flex.pos_relative.w_full[data-group="true"]') || [],
+    const targetElement = currentPage?.querySelector(
+      `[data-id="${blockId.serialize().client}-${blockId.serialize().clock}"]`,
     );
-
-    const currentIndex = linkedList.spread().findIndex((b) => b.id === blockId);
-    const targetElement = blockElements[currentIndex];
     if (!targetElement) return;
 
-    const editableDiv = targetElement.querySelector('[contenteditable="true"]') as HTMLDivElement;
+    const editableDiv = targetElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableDiv) return;
 
     editableDiv.focus();
