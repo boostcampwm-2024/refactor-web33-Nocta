@@ -27,6 +27,9 @@ import {
 } from "./Block.style";
 
 interface BlockProps {
+  virtualIndex: number;
+  virtualStart: number;
+  virtualRef: (node: Element | null | undefined) => void;
   testKey: string;
   id: string;
   block: CRDTBlock;
@@ -71,6 +74,9 @@ interface BlockProps {
 }
 export const Block: React.FC<BlockProps> = memo(
   ({
+    virtualIndex,
+    virtualRef,
+    virtualStart,
     testKey,
     id,
     block,
@@ -275,7 +281,20 @@ export const Block: React.FC<BlockProps> = memo(
     return (
       // TODO: eslint 규칙을 수정해야 할까?
       // TODO: ol일때 index 순서 처리
-      <div data-testid={testKey} style={{ position: "relative" }}>
+      <div
+        data-testid={testKey}
+        data-id={id}
+        data-index={virtualIndex}
+        key={virtualIndex}
+        ref={virtualRef}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          transform: `translateY(${virtualStart}px)`,
+        }}
+      >
         {showTopIndicator && <Indicator />}
         <motion.div
           ref={setNodeRef}
