@@ -22,3 +22,16 @@ export interface Size {
   width: number;
   height: number;
 }
+
+export const DIRECTIONS = [
+  "top",
+  "bottom",
+  "left",
+  "right",
+  "topLeft",
+  "topRight",
+  "bottomLeft",
+  "bottomRight",
+] as const;
+
+export type Direction = (typeof DIRECTIONS)[number];
