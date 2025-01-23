@@ -276,7 +276,6 @@ export const Editor = ({
     if (isLocalChange.current || isSameLocalChange.current) {
       setCaretPosition({
         blockId: editorCRDT.current.currentBlock!.id,
-        linkedList: editorCRDT.current.LinkedList,
         position: editorCRDT.current.currentBlock?.crdt.currentCaret,
         pageId,
       });
@@ -422,7 +421,7 @@ export const Editor = ({
           </SortableContext>
         </DndContext>
         {editorState.linkedList.spread().length === 0 && (
-          <div data-testId="addNewBlockButton" className={addNewBlockButton} onClick={addNewBlock}>
+          <div data-testid="addNewBlockButton" className={addNewBlockButton} onClick={addNewBlock}>
             클릭해서 새로운 블록을 추가하세요
           </div>
         )}

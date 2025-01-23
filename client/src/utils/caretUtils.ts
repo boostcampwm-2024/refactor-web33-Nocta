@@ -3,7 +3,6 @@ import { BlockId } from "@noctaCrdt/NodeId";
 
 interface SetCaretPositionProps {
   blockId: BlockId;
-  linkedList: BlockLinkedList | TextLinkedList;
   clientX?: number;
   clientY?: number;
   position?: number; // Used to set the caret at a specific position
@@ -72,12 +71,7 @@ export const getAbsoluteCaretPosition = (element: HTMLElement): number => {
   return 0;
 };
 
-export const setCaretPosition = ({
-  blockId,
-  linkedList,
-  position,
-  pageId,
-}: SetCaretPositionProps): void => {
+export const setCaretPosition = ({ blockId, position, pageId }: SetCaretPositionProps): void => {
   try {
     if (position === undefined) return;
     const selection = window.getSelection();
