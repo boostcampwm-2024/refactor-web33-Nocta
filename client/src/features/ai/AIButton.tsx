@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import * as style from "./AIButton.style";
-import AIModal from "./AIModal";
+import { AIModal } from "./AIModal";
 
 export const AIButton = () => {
   const [isOpen, setIsOpen] = useState(false);
