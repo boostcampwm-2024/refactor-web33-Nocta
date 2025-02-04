@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BottomNavigator } from "@components/bottomNavigator/BottomNavigator";
 import { ErrorModal } from "@components/modal/ErrorModal";
 import { Sidebar } from "@components/sidebar/Sidebar";
+import { AIButton } from "@features/ai/AIButton";
 import { Page } from "@features/page/Page";
 import { ToastContainer } from "@src/components/Toast/ToastContainer";
 import { useSocketStore } from "@src/stores/useSocketStore";
@@ -100,6 +101,7 @@ export const WorkSpace = () => {
           data-onboarding="bottom-nav"
           handlePageSelect={openPage}
         />
+        <AIButton />
       </div>
       {<OnboardingOverlay isShow={showOnboarding} />}
     </>
