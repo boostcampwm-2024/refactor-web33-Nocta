@@ -91,11 +91,11 @@ export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
 
     // 현재 스타일이 적용된 상태라면 span으로 감싸서 추가
     if (hasStylesApplied(currentState) && currentSpan) {
-      currentSpan.appendChild(document.createTextNode(sanitizeText(currentText)));
+      currentSpan.appendChild(document.createTextNode(currentText));
       fragment.appendChild(currentSpan);
     } else {
       // 스타일이 없다면 일반 텍스트 노드로 추가
-      fragment.appendChild(document.createTextNode(sanitizeText(currentText)));
+      fragment.appendChild(document.createTextNode(currentText));
     }
     currentText = "";
     currentSpan = null;
@@ -267,18 +267,18 @@ const setsEqual = (a: Set<string>, b: Set<string>): boolean => {
   return true;
 };
 
-const sanitizeText = (text: string): string => {
-  return text.replace(/<br>/g, "\u00A0").replace(/[<>&"']/g, (match) => {
-    const escapeMap: Record<string, string> = {
-      "<": "&lt;",
-      ">": "&gt;",
-      "&": "&amp;",
-      '"': "&quot;",
-      "'": "&#x27;",
-    };
-    return escapeMap[match] || match;
-  });
-};
+// const sanitizeText = (text: string): string => {
+//   return text.replace(/<br>/g, "\u00A0").replace(/[<>&"']/g, (match) => {
+//     const escapeMap: Record<string, string> = {
+//       "<": "&lt;",
+//       ">": "&gt;",
+//       "&": "&amp;",
+//       '"': "&quot;",
+//       "'": "&#x27;",
+//     };
+//     return escapeMap[match] || match;
+//   });
+// };
 
 // 배열 비교 헬퍼 함수
 export const arraysEqual = (a: string[], b: string[]): boolean => {
