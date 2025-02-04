@@ -270,7 +270,7 @@ export const useMarkdownGrammer = ({
                 editorCRDT.currentBlock = targetBlock;
                 setCaretPosition({
                   blockId: targetBlock.id,
-                  linkedList: editorCRDT.LinkedList,
+
                   position: targetBlock.crdt.read().length,
                   pageId,
                 });
@@ -437,7 +437,7 @@ export const useMarkdownGrammer = ({
           currentBlock.crdt.currentCaret = e.key === "Home" ? 0 : currentBlock.crdt.read().length;
           setCaretPosition({
             blockId: currentBlock.id,
-            linkedList: editorCRDT.LinkedList,
+
             position: currentBlock.crdt.currentCaret,
             pageId,
           });
@@ -456,7 +456,7 @@ export const useMarkdownGrammer = ({
           editorCRDT.currentBlock = headBlock;
           setCaretPosition({
             blockId: headBlock.id,
-            linkedList: editorCRDT.LinkedList,
+
             position: currentCaretPosition,
             pageId,
           });
@@ -478,7 +478,7 @@ export const useMarkdownGrammer = ({
           editorCRDT.currentBlock = lastBlock;
           setCaretPosition({
             blockId: lastBlock.id,
-            linkedList: editorCRDT.LinkedList,
+
             position: currentCaretPosition,
             pageId,
           });
@@ -516,7 +516,7 @@ export const useMarkdownGrammer = ({
           editorCRDT.currentBlock = targetBlock;
           setCaretPosition({
             blockId: targetBlock.id,
-            linkedList: editorCRDT.LinkedList,
+
             position: Math.min(caretPosition, targetBlock.crdt.read().length),
             pageId,
           });
@@ -547,7 +547,7 @@ export const useMarkdownGrammer = ({
               editorCRDT.currentBlock = targetBlock;
               setCaretPosition({
                 blockId: targetBlock.id,
-                linkedList: editorCRDT.LinkedList,
+
                 position: targetBlock.crdt.read().length,
                 pageId,
               });
@@ -573,7 +573,7 @@ export const useMarkdownGrammer = ({
               editorCRDT.currentBlock = targetBlock;
               setCaretPosition({
                 blockId: targetBlock.id,
-                linkedList: editorCRDT.LinkedList,
+
                 position: 0,
                 pageId,
               });

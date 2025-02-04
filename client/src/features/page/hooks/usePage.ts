@@ -5,18 +5,6 @@ import { Position, Size } from "@src/types/page";
 import { useIsSidebarOpen } from "@stores/useSidebarStore";
 
 const PADDING = SPACING.MEDIUM * 2;
-export const DIRECTIONS = [
-  "top",
-  "bottom",
-  "left",
-  "right",
-  "topLeft",
-  "topRight",
-  "bottomLeft",
-  "bottomRight",
-] as const;
-
-type Direction = (typeof DIRECTIONS)[number];
 
 // 만약 maximize 상태면, 화면이 커질때도 꽉 촤게 해줘야함.
 export const usePage = ({ x, y }: Position) => {
@@ -60,128 +48,6 @@ export const usePage = ({ x, y }: Position) => {
 
     document.addEventListener("pointermove", handleDragMove);
     document.addEventListener("pointerup", handleDragEnd);
-  };
-
-  const pageResize = (e: React.MouseEvent, direction: Direction) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startWidth = size.width;
-    const startHeight = size.height;
-    const startPosition = { x: position.x, y: position.y };
-
-    const resize = (e: MouseEvent) => {
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
-
-      let newWidth = startWidth;
-      let newHeight = startHeight;
-      let newX = startPosition.x;
-      let newY = startPosition.y;
-
-      switch (direction) {
-        case "right": {
-          newWidth = Math.min(
-            window.innerWidth - startPosition.x - getSidebarWidth() - PADDING,
-            Math.max(PAGE.MIN_WIDTH, startWidth + deltaX),
-          );
-          break;
-        }
-
-        case "left": {
-          newWidth = Math.min(
-            startPosition.x + startWidth,
-            Math.max(PAGE.MIN_WIDTH, startWidth - deltaX),
-          );
-          newX = Math.max(0, startPosition.x + startWidth - newWidth);
-          break;
-        }
-
-        case "bottom": {
-          newHeight = Math.min(
-            window.innerHeight - startPosition.y - PADDING,
-            Math.max(PAGE.MIN_HEIGHT, startHeight + deltaY),
-          );
-          break;
-        }
-
-        case "top": {
-          newHeight = Math.min(
-            startPosition.y + startHeight,
-            Math.max(PAGE.MIN_HEIGHT, startHeight - deltaY),
-          );
-          newY = Math.max(0, startPosition.y + startHeight - newHeight);
-          break;
-        }
-
-        case "topLeft": {
-          newHeight = Math.min(
-            startPosition.y + startHeight,
-            Math.max(PAGE.MIN_HEIGHT, startHeight - deltaY),
-          );
-          newY = Math.max(0, startPosition.y + startHeight - newHeight);
-
-          newWidth = Math.min(
-            startPosition.x + startWidth,
-            Math.max(PAGE.MIN_WIDTH, startWidth - deltaX),
-          );
-          newX = Math.max(0, startPosition.x + startWidth - newWidth);
-          break;
-        }
-
-        case "topRight": {
-          newHeight = Math.min(
-            startPosition.y + startHeight,
-            Math.max(PAGE.MIN_HEIGHT, startHeight - deltaY),
-          );
-          newY = Math.max(0, startPosition.y + startHeight - newHeight);
-
-          newWidth = Math.min(
-            window.innerWidth - startPosition.x - getSidebarWidth() - PADDING,
-            Math.max(PAGE.MIN_WIDTH, startWidth + deltaX),
-          );
-          break;
-        }
-
-        case "bottomLeft": {
-          newHeight = Math.min(
-            window.innerHeight - startPosition.y - PADDING,
-            Math.max(PAGE.MIN_HEIGHT, startHeight + deltaY),
-          );
-
-          newWidth = Math.min(
-            startPosition.x + startWidth,
-            Math.max(PAGE.MIN_WIDTH, startWidth - deltaX),
-          );
-          newX = Math.max(0, startPosition.x + startWidth - newWidth);
-          break;
-        }
-
-        case "bottomRight": {
-          newHeight = Math.min(
-            window.innerHeight - startPosition.y - PADDING,
-            Math.max(PAGE.MIN_HEIGHT, startHeight + deltaY),
-          );
-
-          newWidth = Math.min(
-            window.innerWidth - startPosition.x - getSidebarWidth() - PADDING,
-            Math.max(PAGE.MIN_WIDTH, startWidth + deltaX),
-          );
-          break;
-        }
-      }
-
-      setSize({ width: newWidth, height: newHeight });
-      setPosition({ x: newX, y: newY });
-    };
-
-    const stopResize = () => {
-      document.removeEventListener("mousemove", resize);
-      document.removeEventListener("mouseup", stopResize);
-    };
-
-    document.addEventListener("mousemove", resize);
-    document.addEventListener("mouseup", stopResize);
   };
 
   const pageMinimize = () => {
@@ -283,6 +149,11 @@ export const usePage = ({ x, y }: Position) => {
     };
   }, [isMaximized, isSidebarOpen]); // maximize 상태와 sidebar 상태만 의존성
 
+  const handleResizeComplete = (newSize: Size, newPosition: Position) => {
+    setSize(newSize);
+    setPosition(newPosition);
+  };
+
   // 일반 상태일 때의 resize 처리
   useEffect(() => {
     if (isMaximized) return;
@@ -308,9 +179,10 @@ export const usePage = ({ x, y }: Position) => {
     position,
     size,
     pageDrag,
-    pageResize,
     pageMinimize,
     pageMaximize,
     isMaximized,
+    isSidebarOpen,
+    handleResizeComplete,
   };
 };
