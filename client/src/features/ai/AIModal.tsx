@@ -1,16 +1,18 @@
-import { useState, KeyboardEvent } from "react";
 import { motion } from "framer-motion";
-import * as style from "./AIModal.style";
-import { animation } from "./AiModal.animation";
+import { useState, KeyboardEvent } from "react";
 import { FaLocationArrow } from "react-icons/fa";
 import { useCreateAIDocumentMutation } from "@src/apis/ai";
+import { useSocketStore } from "@src/stores/useSocketStore";
+import * as style from "./AIModal.style";
+import { animation } from "./AiModal.animation";
 
 export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
-  const [text, setText] = useState("");
+  const { clientId, workspace } = useSocketStore();
+  const [message, setMessage] = useState("");
   const { mutate: createAIDocument } = useCreateAIDocumentMutation(onCloseButton);
 
   const handleSubmit = () => {
-    createAIDocument({ text });
+    createAIDocument({ clientId, workspaceId: workspace?.id, message });
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -28,9 +30,9 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
       <div className={style.popoverContainer}>
         <div className={style.inputContainer}>
           <input
-            type="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            type="message"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="문서 작성해줘"
             className={style.inputBox}
