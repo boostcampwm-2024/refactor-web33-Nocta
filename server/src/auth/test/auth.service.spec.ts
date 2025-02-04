@@ -7,7 +7,7 @@ import * as bcrypt from "bcryptjs";
 import { Response as ExpressResponse } from "express";
 
 // Mock modules
-jest.mock("bcrypt", () => ({
+jest.mock("bcryptjs", () => ({
   hash: jest.fn().mockResolvedValue("hashedPassword"),
   compare: jest.fn().mockResolvedValue(true),
 }));
