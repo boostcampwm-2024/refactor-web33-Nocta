@@ -3,7 +3,7 @@ import { AuthService } from "../auth.service";
 import { JwtService } from "@nestjs/jwt";
 import { getModelToken } from "@nestjs/mongoose";
 import { User } from "../schemas/user.schema";
-import * as bcrypt from "bcrypt";
+import * as bcrypt from "bcryptjs";
 import { Response as ExpressResponse } from "express";
 
 // Mock modules
