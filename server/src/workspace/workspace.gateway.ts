@@ -11,6 +11,7 @@ import {
 import { Socket, Server } from "socket.io";
 import { WorkSpaceService } from "./workspace.service";
 import {
+  Operation,
   RemoteBlockDeleteOperation,
   RemoteCharDeleteOperation,
   RemotePageDeleteOperation,
@@ -41,19 +42,6 @@ interface BatchOperation {
   event: string;
   operation: Operation;
 }
-
-type Operation =
-  | RemotePageCreateOperation
-  | RemotePageDeleteOperation
-  | RemotePageUpdateOperation
-  | RemoteBlockInsertOperation
-  | RemoteBlockDeleteOperation
-  | RemoteBlockUpdateOperation
-  | RemoteBlockReorderOperation
-  | RemoteCharInsertOperation
-  | RemoteCharDeleteOperation
-  | RemoteCharUpdateOperation
-  | CursorPosition;
 
 @WebSocketGateway({
   cors: {
@@ -135,6 +123,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         }
         client.join(NewWorkspaceId);
       }
+
       const user = await this.authService.findById(userId);
       client.data.workspaceId = NewWorkspaceId;
       const currentWorkSpace = (
@@ -368,7 +357,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const { pageId } = data;
       const { workspaceId } = client.data;
       // 워크스페이스에서 해당 페이지 찾기
-      const currentPage = await this.workSpaceService.getPage(workspaceId, pageId);
+      const currentPage = await this.workSpaceService.updatePage(workspaceId, pageId);
       if (!currentPage) {
         throw new WsException(`Page with id ${pageId} not found`);
       }
@@ -445,6 +434,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const newEditorCRDT = new EditorCRDT(data.clientId);
       const newPage = new Page(nanoid(), "새로운 페이지", "Docs", newEditorCRDT);
       workspace.pageList.push(newPage);
+      this.workSpaceService.updateWorkspace(workspace);
 
       const operation = {
         type: "pageCreate",
@@ -489,6 +479,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
       }
       const pageTitle = (await this.workSpaceService.getPage(workspaceId, data.pageId)).title;
       currentWorkspace.pageList.splice(pageIndex, 1);
+      this.workSpaceService.updateWorkspace(currentWorkspace);
 
       const operation = {
         type: "pageDelete",
@@ -532,7 +523,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
       );
 
       const { pageId, title, icon, workspaceId } = data;
-      const currentPage = await this.workSpaceService.getPage(workspaceId, data.pageId);
+      const currentWorkspace = await this.workSpaceService.getWorkspace(workspaceId);
+      const currentPage = currentWorkspace.pageList.find((page) => page.id === pageId);
       if (!currentPage) {
         throw new Error(`Page with id ${data.pageId} not found`);
       }
@@ -544,6 +536,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
       if (icon) {
         currentPage.icon = icon;
       }
+
+      this.workSpaceService.updateWorkspace(currentWorkspace);
 
       const operation = {
         type: "pageUpdate",
@@ -582,12 +576,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         JSON.stringify(data),
       );
 
-      const { workspaceId } = client.data;
-      const currentPage = await this.workSpaceService.getPage(workspaceId, data.pageId);
-      if (!currentPage) {
-        throw new Error(`Page with id ${data.pageId} not found`);
-      }
-      currentPage.crdt.remoteInsert(data);
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       const operation = {
         type: "blockInsert",
@@ -619,12 +608,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Block Delete 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentPage = await this.workSpaceService.getPage(workspaceId, data.pageId);
-      if (!currentPage) {
-        throw new Error(`Page with id ${data.pageId} not found`);
-      }
-      currentPage.crdt.remoteDelete(data);
+
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       const operation = {
         type: "blockDelete",
@@ -633,7 +618,6 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         pageId: data.pageId,
       } as RemoteBlockDeleteOperation;
       this.emitOperation(client.id, data.pageId, "delete/block", operation, batch);
-      currentPage.crdt.LinkedList.updateAllOrderedListIndices();
     } catch (error) {
       this.logger.error(
         `Block Delete 연산 처리 중 오류 발생 - Client ID: ${clientInfo?.clientId}`,
@@ -658,13 +642,9 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Block Update 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentPage = await this.workSpaceService.getPage(workspaceId, data.pageId);
-      if (!currentPage) {
-        throw new Error(`Page with id ${data.pageId} not found`);
-      }
-      currentPage.crdt.remoteUpdate(data.node, data.pageId);
-      currentPage.crdt.LinkedList.updateAllOrderedListIndices();
+
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
+
       const operation = {
         type: "blockUpdate",
         node: data.node,
@@ -695,12 +675,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Block Reorder 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentPage = await this.workSpaceService.getPage(workspaceId, data.pageId);
-      if (!currentPage) {
-        throw new Error(`Page with id ${data.pageId} not found`);
-      }
-      currentPage.crdt.remoteReorder(data);
+
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       // 5. 다른 클라이언트들에게 업데이트된 블록 정보 브로드캐스트
       const operation = {
@@ -711,7 +687,6 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         pageId: data.pageId,
       } as RemoteBlockReorderOperation;
       this.emitOperation(client.id, data.pageId, "reorder/block", operation, batch);
-      currentPage.crdt.LinkedList.updateAllOrderedListIndices();
     } catch (error) {
       this.logger.error(
         `Block Reorder 연산 처리 중 오류 발생 - Client ID: ${clientInfo?.clientId}`,
@@ -735,18 +710,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Block checkbox 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentBlock = await this.workSpaceService.getBlock(
-        workspaceId,
-        data.pageId,
-        data.blockId,
-      );
 
-      if (!currentBlock) {
-        throw new Error(`Block with id ${data.blockId} not found`);
-      }
-
-      currentBlock.isChecked = data.isChecked;
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       const operation = {
         type: "blockCheckbox",
@@ -781,16 +746,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         JSON.stringify(data),
       );
 
-      const { workspaceId } = client.data;
-      const currentBlock = await this.workSpaceService.getBlock(
-        workspaceId,
-        data.pageId,
-        data.blockId,
-      );
-      if (!currentBlock) {
-        throw new Error(`Block with id ${data.blockId} not found`);
-      }
-      currentBlock.crdt.remoteInsert(data);
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       // server는 EditorCRDT 없습니다. - BlockCRDT 로 사용되고있음.
       const operation = {
@@ -827,16 +783,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Char Delete 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentBlock = await this.workSpaceService.getBlock(
-        workspaceId,
-        data.pageId,
-        data.blockId,
-      );
-      if (!currentBlock) {
-        throw new Error(`Block with id ${data.blockId} not found`);
-      }
-      currentBlock.crdt.remoteDelete(data);
+
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       const operation = {
         type: "charDelete",
@@ -870,16 +818,8 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         `Char Update 연산 수신 - Client ID: ${clientInfo?.clientId}, Data:`,
         JSON.stringify(data),
       );
-      const { workspaceId } = client.data;
-      const currentBlock = await this.workSpaceService.getBlock(
-        workspaceId,
-        data.pageId,
-        data.blockId,
-      );
-      if (!currentBlock) {
-        throw new Error(`Block with id ${data.blockId} not found`);
-      }
-      currentBlock.crdt.remoteUpdate(data);
+
+      this.workSpaceService.storeOperation(client.data.workspaceId, data);
 
       const operation = {
         type: "charUpdate",
@@ -1007,37 +947,37 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
     try {
       switch (operation.type) {
         case "blockInsert":
-          await this.handleBlockInsert(operation, client, true);
+          this.handleBlockInsert(operation, client, true);
           break;
         case "blockUpdate":
-          await this.handleBlockUpdate(operation, client, true);
+          this.handleBlockUpdate(operation, client, true);
           break;
         case "blockDelete":
-          await this.handleBlockDelete(operation, client, true);
+          this.handleBlockDelete(operation, client, true);
           break;
         case "blockReorder":
-          await this.handleBlockReorder(operation, client, true);
+          this.handleBlockReorder(operation, client, true);
           break;
         case "charInsert":
-          await this.handleCharInsert(operation, client, true);
+          this.handleCharInsert(operation, client, true);
           break;
         case "charDelete":
-          await this.handleCharDelete(operation, client, true);
+          this.handleCharDelete(operation, client, true);
           break;
         case "charUpdate":
-          await this.handleCharUpdate(operation, client, true);
+          this.handleCharUpdate(operation, client, true);
           break;
         case "pageCreate":
-          await this.handlePageCreate(operation, client, true);
+          this.handlePageCreate(operation, client, true);
           break;
         case "pageDelete":
-          await this.handlePageDelete(operation, client, true);
+          this.handlePageDelete(operation, client, true);
           break;
         case "pageUpdate":
-          await this.handlePageUpdate(operation, client, true);
+          this.handlePageUpdate(operation, client, true);
           break;
         case "cursor":
-          await this.handleCursor(operation, client, true);
+          this.handleCursor(operation, client, true);
           break;
         default:
           this.logger.warn("배치 연산 중 알 수 없는 연산 발견:", operation);

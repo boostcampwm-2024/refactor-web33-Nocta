@@ -5,7 +5,6 @@ export const pageControlContainer = css({
   gap: "sm",
   _hover: {
     "& svg": {
-      transform: "scale(1)", // 추가 효과
       opacity: 1,
     },
   },

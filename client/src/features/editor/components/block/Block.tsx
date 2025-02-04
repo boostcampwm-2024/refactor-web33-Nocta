@@ -272,11 +272,31 @@ export const Block: React.FC<BlockProps> = memo(
       />
     );
 
+    const getTextAndStylesHash = (block: CRDTBlock) => {
+      const chars = block.crdt.LinkedList.spread();
+      return JSON.stringify(
+        chars.map((char) => ({
+          value: char.value,
+          style: char.style,
+          color: char.color,
+          backgroundColor: char.backgroundColor,
+        })),
+      );
+    };
+
     useEffect(() => {
       if (blockRef.current) {
         setInnerHTML({ element: blockRef.current, block });
       }
-    }, [block.crdt.serialize()]);
+    }, [getTextAndStylesHash(block)]);
+
+    // useEffect(() => {
+    //   console.log(block.crdt);
+    //   if (blockRef.current) {
+    //     console.log(block.crdt.LinkedList.spread());
+    //     setInnerHTML({ element: blockRef.current, block });
+    //   }
+    // }, [block.crdt.serialize()]);
 
     return (
       // TODO: eslint 규칙을 수정해야 할까?
