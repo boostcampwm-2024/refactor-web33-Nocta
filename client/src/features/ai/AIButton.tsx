@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import * as style from "./AIButton.style";
 import AIModal from "./AIModal";
 
-const AIButton = () => {
+export const AIButton = () => {
   const [isOpen, setIsOpen] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -34,5 +34,3 @@ const AIButton = () => {
     </div>
   );
 };
-
-export default AIButton;
