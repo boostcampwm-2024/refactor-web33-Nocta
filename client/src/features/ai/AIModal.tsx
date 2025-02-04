@@ -3,11 +3,15 @@ import { motion } from "framer-motion";
 import * as style from "./AIModal.style";
 import { animation } from "./AiModal.animation";
 import { FaLocationArrow } from "react-icons/fa";
+import { useCreateAIDocumentMutation } from "@src/apis/ai";
 
-const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
+export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
   const [text, setText] = useState("");
+  const { mutate: createAIDocument } = useCreateAIDocumentMutation(onCloseButton);
 
-  const handleSubmit = () => {};
+  const handleSubmit = () => {
+    createAIDocument({ text });
+  };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -39,5 +43,3 @@ const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
     </motion.div>
   );
 };
-
-export default AIModal;
