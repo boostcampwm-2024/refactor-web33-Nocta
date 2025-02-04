@@ -1,4 +1,3 @@
-import { BlockLinkedList, TextLinkedList } from "@noctaCrdt/LinkedList";
 import { BlockId } from "@noctaCrdt/NodeId";
 
 interface SetCaretPositionProps {
