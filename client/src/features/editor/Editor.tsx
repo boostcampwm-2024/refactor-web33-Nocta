@@ -4,15 +4,11 @@ import { EditorCRDT } from "@noctaCrdt/Crdt";
 import { BlockLinkedList } from "@noctaCrdt/LinkedList";
 import { Block as CRDTBlock } from "@noctaCrdt/Node";
 import { serializedEditorDataProps } from "@noctaCrdt/types/Interfaces";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef, useState, useCallback, useEffect, useMemo, memo } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore.ts";
 import { setCaretPosition, getAbsoluteCaretPosition } from "@src/utils/caretUtils.ts";
-import {
-  editorContainer,
-  editorTitleContainer,
-  editorTitle,
-  addNewBlockButton,
-} from "./Editor.style";
+import { editorContainer, editorTitle, addNewBlockButton } from "./Editor.style";
 import { Block } from "./components/block/Block";
 import { useBlockDragAndDrop } from "./hooks/useBlockDragAndDrop";
 import { useBlockOperation } from "./hooks/useBlockOperation.ts";
@@ -50,7 +46,6 @@ export const Editor = memo(
     const { clientId } = useSocketStore();
     const [displayTitle, setDisplayTitle] = useState(pageTitle);
     const [dragBlockList, setDragBlockList] = useState<string[]>([]);
-    console.log(serializedEditorData);
 
     useEffect(() => {
       if (pageTitle === "새로운 페이지" || pageTitle === "") {
@@ -273,7 +268,35 @@ export const Editor = memo(
       if (isLocalChange.current || isSameLocalChange.current) {
         setCaretPosition({
           blockId: editorCRDT.current.currentBlock!.id,
-          linkedList: editorCRDT.current.LinkedList,
+          position: editorCRDT.current.currentBlock?.crdt.currentCaret,
+          pageId,
+        });
+        isLocalChange.current = false;
+        isSameLocalChange.current = false;
+        return;
+      }
+    }, [editorCRDT.current.currentBlock?.id.serialize()]);
+
+    // 리스트 가상화
+    const editorRef = useRef<HTMLDivElement>(null);
+
+    const virtualizer = useVirtualizer({
+      count: editorState.linkedList.spread().length,
+      getScrollElement: () => editorRef.current,
+      estimateSize: () => 24,
+      overscan: 5,
+    });
+
+    useEffect(() => {
+      if (!editorCRDT || !editorCRDT.current.currentBlock) return;
+
+      const { activeElement } = document;
+      if (activeElement?.tagName.toLowerCase() === "input") {
+        return; // input에 포커스가 있으면 캐럿 위치 변경하지 않음
+      }
+      if (isLocalChange.current || isSameLocalChange.current) {
+        setCaretPosition({
+          blockId: editorCRDT.current.currentBlock!.id,
           position: editorCRDT.current.currentBlock?.crdt.currentCaret,
           pageId,
         });
@@ -352,18 +375,23 @@ export const Editor = memo(
       return <div>Loading editor data...</div>;
     }
     return (
-      <div data-testid={`editor-${testKey}`} className={editorContainer}>
-        <div className={editorTitleContainer}>
-          <input
-            data-testid={`editorTitle-${testKey}`}
-            type="text"
-            placeholder="제목을 입력하세요..."
-            onChange={handleTitleChange}
-            onBlur={handleBlur}
-            value={displayTitle}
-            className={editorTitle}
-          />
-          <div style={{ height: "36px" }}></div>
+      <div data-testid={`editor-${testKey}`} className={editorContainer} ref={editorRef}>
+        <input
+          data-testid={`editorTitle-${testKey}`}
+          type="text"
+          placeholder="제목을 입력하세요..."
+          onChange={handleTitleChange}
+          onBlur={handleBlur}
+          value={displayTitle}
+          className={editorTitle}
+        />
+        <div style={{ height: "36px" }}></div>
+        <div
+          style={{
+            height: virtualizer.getTotalSize(),
+            position: "relative",
+          }}
+        >
           <DndContext
             onDragEnd={(event: DragEndEvent) => {
               handleDragEnd(event, dragBlockList, () => setDragBlockList([]));
@@ -379,37 +407,43 @@ export const Editor = memo(
                 .map((block) => `${block.id.client}-${block.id.clock}`)}
               strategy={verticalListSortingStrategy}
             >
-              {editorState.linkedList.spread().map((block, idx) => (
-                <Block
-                  testKey={`block-${idx}`}
-                  key={`${block.id.client}-${block.id.clock}`}
-                  id={`${block.id.client}-${block.id.clock}`}
-                  block={block}
-                  isActive={block.id === editorCRDT.current.currentBlock?.id}
-                  onInput={handleBlockInput}
-                  onCompositionStart={handleCompositionStart}
-                  onCompositionUpdate={handleCompositionUpdate}
-                  onCompositionEnd={handleCompositionEnd}
-                  onKeyDown={handleKeyDown}
-                  onCopy={handleCopy}
-                  onPaste={handlePaste}
-                  onClick={handleBlockClick}
-                  onAnimationSelect={handleAnimationSelect}
-                  onTypeSelect={handleTypeSelect}
-                  onCopySelect={handleCopySelect}
-                  onDeleteSelect={handleDeleteSelect}
-                  onTextStyleUpdate={onTextStyleUpdate}
-                  onTextColorUpdate={onTextColorUpdate}
-                  onTextBackgroundColorUpdate={onTextBackgroundColorUpdate}
-                  dragBlockList={dragBlockList}
-                  onCheckboxToggle={handleCheckboxToggle}
-                />
-              ))}
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const block = editorState.linkedList.spread()[virtualRow.index];
+                return (
+                  <Block
+                    testKey={`block-${virtualRow.index}`}
+                    virtualStart={virtualRow.start}
+                    virtualIndex={virtualRow.index}
+                    virtualRef={virtualizer.measureElement}
+                    key={`${block.id.client}-${block.id.clock}`}
+                    id={`${block.id.client}-${block.id.clock}`}
+                    block={block}
+                    isActive={block.id === editorCRDT.current.currentBlock?.id}
+                    onInput={handleBlockInput}
+                    onCompositionStart={handleCompositionStart}
+                    onCompositionUpdate={handleCompositionUpdate}
+                    onCompositionEnd={handleCompositionEnd}
+                    onKeyDown={handleKeyDown}
+                    onCopy={handleCopy}
+                    onPaste={handlePaste}
+                    onClick={handleBlockClick}
+                    onAnimationSelect={handleAnimationSelect}
+                    onTypeSelect={handleTypeSelect}
+                    onCopySelect={handleCopySelect}
+                    onDeleteSelect={handleDeleteSelect}
+                    onTextStyleUpdate={onTextStyleUpdate}
+                    onTextColorUpdate={onTextColorUpdate}
+                    onTextBackgroundColorUpdate={onTextBackgroundColorUpdate}
+                    dragBlockList={dragBlockList}
+                    onCheckboxToggle={handleCheckboxToggle}
+                  />
+                );
+              })}
             </SortableContext>
           </DndContext>
           {editorState.linkedList.spread().length === 0 && (
             <div
-              data-testId="addNewBlockButton"
+              data-testid="addNewBlockButton"
               className={addNewBlockButton}
               onClick={addNewBlock}
             >

@@ -1,9 +1,7 @@
-import { BlockLinkedList, TextLinkedList } from "@noctaCrdt/LinkedList";
 import { BlockId } from "@noctaCrdt/NodeId";
 
 interface SetCaretPositionProps {
   blockId: BlockId;
-  linkedList: BlockLinkedList | TextLinkedList;
   clientX?: number;
   clientY?: number;
   position?: number; // Used to set the caret at a specific position
@@ -72,12 +70,7 @@ export const getAbsoluteCaretPosition = (element: HTMLElement): number => {
   return 0;
 };
 
-export const setCaretPosition = ({
-  blockId,
-  linkedList,
-  position,
-  pageId,
-}: SetCaretPositionProps): void => {
+export const setCaretPosition = ({ blockId, position, pageId }: SetCaretPositionProps): void => {
   try {
     if (position === undefined) return;
     const selection = window.getSelection();
@@ -85,15 +78,12 @@ export const setCaretPosition = ({
 
     const currentPage = document.getElementById(pageId);
 
-    const blockElements = Array.from(
-      currentPage?.querySelectorAll('.d_flex.pos_relative.w_full[data-group="true"]') || [],
+    const targetElement = currentPage?.querySelector(
+      `[data-id="${blockId.serialize().client}-${blockId.serialize().clock}"]`,
     );
-
-    const currentIndex = linkedList.spread().findIndex((b) => b.id === blockId);
-    const targetElement = blockElements[currentIndex];
     if (!targetElement) return;
 
-    const editableDiv = targetElement.querySelector('[contenteditable="true"]') as HTMLDivElement;
+    const editableDiv = targetElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableDiv) return;
 
     editableDiv.focus();
