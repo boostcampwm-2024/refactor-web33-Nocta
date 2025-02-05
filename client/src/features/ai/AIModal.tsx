@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState, KeyboardEvent } from "react";
 import { FaLocationArrow } from "react-icons/fa";
 import { useCreateAIDocumentMutation } from "@src/apis/ai";
+import { LoadingSpinner } from "@src/components/lotties/LoadingSpinner";
 import { useSocketStore } from "@src/stores/useSocketStore";
 import * as style from "./AIModal.style";
 import { animation } from "./AiModal.animation";
@@ -9,8 +10,8 @@ import { animation } from "./AiModal.animation";
 export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
   const { clientId, workspace } = useSocketStore();
   const [message, setMessage] = useState("");
-  const { mutate: createAIDocument } = useCreateAIDocumentMutation(onCloseButton);
-
+  const { mutate: createAIDocument, status } = useCreateAIDocumentMutation(onCloseButton);
+  const isLoading = status === "pending";
   const handleSubmit = () => {
     createAIDocument({ clientId, workspaceId: workspace?.id, message });
   };
@@ -29,15 +30,24 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
     >
       <div className={style.popoverContainer}>
         <div className={style.inputContainer}>
-          <input
-            type="message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="문서 작성해줘"
-            className={style.inputBox}
-          />
-          <div className={style.iconBox} onClick={handleSubmit}>
+          <div className={style.inputWrapper}>
+            <input
+              type="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="문서 작성해줘"
+              className={style.inputBox}
+              disabled={isLoading}
+            />
+            {isLoading && (
+              <div className={style.loadingOverlay}>
+                <LoadingSpinner size={50} />
+              </div>
+            )}
+          </div>
+          <div className={style.iconBox} onClick={!isLoading ? handleSubmit : undefined}>
+            {isLoading && <div className={style.loadingOverlay}></div>}
             <FaLocationArrow />
           </div>
         </div>
