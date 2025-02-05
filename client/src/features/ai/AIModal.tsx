@@ -4,6 +4,7 @@ import { FaLocationArrow } from "react-icons/fa";
 import { useCreateAIDocumentMutation } from "@src/apis/ai";
 import { LoadingSpinner } from "@src/components/lotties/LoadingSpinner";
 import { useSocketStore } from "@src/stores/useSocketStore";
+import { useToastStore } from "@src/stores/useToastStore";
 import * as style from "./AIModal.style";
 import { animation } from "./AiModal.animation";
 
@@ -12,8 +13,16 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
   const [message, setMessage] = useState("");
   const { mutate: createAIDocument, status } = useCreateAIDocumentMutation(onCloseButton);
   const isLoading = status === "pending";
+
+  const { addToast } = useToastStore();
   const handleSubmit = () => {
-    createAIDocument({ clientId, workspaceId: workspace?.id, message });
+    if (!message.trim()) {
+      addToast("올바른 명령을 작성해주세요");
+      return;
+    }
+    if (!isLoading) {
+      createAIDocument({ clientId, workspaceId: workspace?.id, message });
+    }
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
