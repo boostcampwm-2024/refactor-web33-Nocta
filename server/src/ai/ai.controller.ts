@@ -48,7 +48,7 @@ export class AiController {
   async chat(
     @Body() body: { clientId: number; workspaceId: string; message: string },
     @Response({ passthrough: true }) res: ExpressResponse,
-  ): Promise<Object> {
+  ): Promise<void> {
     const message = await this.aiService.requestAI(body.message);
     const operations = await this.aiService.generateDocumentToCRDT(
       body.workspaceId,
@@ -56,6 +56,6 @@ export class AiController {
       message,
     );
     this.aiService.emitOperations(body.workspaceId, operations);
-    return { message: operations };
+    res.status(200).send();
   }
 }

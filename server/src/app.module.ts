@@ -6,7 +6,7 @@ import { MongooseModule } from "@nestjs/mongoose";
 import { AuthModule } from "./auth/auth.module";
 import { WorkspaceModule } from "./workspace/workspace.module";
 import { WorkspaceController } from "./workspace/workspace.controller";
-import { AiModule } from './ai/ai.module';
+import { AiModule } from "./ai/ai.module";
 
 @Module({
   imports: [

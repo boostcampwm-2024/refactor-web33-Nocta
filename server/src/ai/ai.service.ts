@@ -8,13 +8,12 @@ import {
   CRDTOperation,
   RemoteBlockUpdateOperation,
 } from "@noctaCrdt/types/Interfaces";
-import { Block } from "@noctaCrdt/Node";
+import { Block, Char } from "@noctaCrdt/Node";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
 import { Page } from "@noctaCrdt/Page";
 import { nanoid } from "nanoid";
 import { WorkSpaceService } from "../workspace/workspace.service";
 import { BlockId, CharId } from "@noctaCrdt/NodeId";
-import { Char } from "@noctaCrdt/Node";
 import { HttpService } from "@nestjs/axios";
 import { map, lastValueFrom } from "rxjs";
 
@@ -98,10 +97,10 @@ export class AiService {
   async generateDocumentToCRDT(
     workspaceId: string,
     clientId: number,
-    document: String,
+    document: string,
   ): Promise<Operation[]> {
     const documentLines = document.split("\n");
-    let title = documentLines[0];
+    let title = documentLines.at(0);
     const { type, length, indent } = this.parseBlockType(title);
     title = title.slice(length + indent * 2);
 
@@ -127,7 +126,8 @@ export class AiService {
     documentLines.forEach((line) => {
       const { type, length, indent } = this.parseBlockType(line);
 
-      const newBlock = new Block("", new BlockId(blockClock++, clientId));
+      const newBlock = new Block("", new BlockId(blockClock, clientId));
+      blockClock += 1;
       newBlock.next = null;
       newBlock.prev = lastBlock ? lastBlock.id : null;
       newBlock.type = type;
@@ -165,7 +165,7 @@ export class AiService {
         if (char === "*") {
           if (i < slicedLine.length - 1 && slicedLine[i + 1] === "*") {
             bold = !bold;
-            i++;
+            i += 1;
             continue;
           } else {
             italic = !italic;
@@ -174,18 +174,19 @@ export class AiService {
         } else if (char === "~") {
           if (i < slicedLine.length - 1 && slicedLine[i + 1] === "~") {
             strikethrough = !strikethrough;
-            i++;
+            i += 1;
             continue;
           }
         } else if (char === "_") {
           if (i < slicedLine.length - 1 && slicedLine[i + 1] === "_") {
             underline = !underline;
-            i++;
+            i += 1;
             continue;
           }
         }
 
-        const charNode = new Char(char, new CharId(charClock++, clientId));
+        const charNode = new Char(char, new CharId(charClock, clientId));
+        charClock += 1;
         charNode.next = null;
         charNode.prev = lastNode ? lastNode.id : null;
 
@@ -219,7 +220,7 @@ export class AiService {
 
   // CRDT 연산들을 페이지에 적용하고 다른 클라이언트에 뿌리는 로직 (workspace.service)
   emitOperations(workspaceId: string, operations: Operation[]) {
-    const pageOperation = operations[0];
+    const pageOperation = operations.at(0);
     const crdtOperations = operations.slice(1);
     this.workspaceService.getServer().to(workspaceId).emit("create/page", pageOperation);
 
@@ -231,7 +232,7 @@ export class AiService {
   }
 
   // 블록 타입을 판정하는 로직
-  parseBlockType(line: String): { type: ElementType; length: number; indent: number } {
+  parseBlockType(line: string): { type: ElementType; length: number; indent: number } {
     const indent = line.match(/^[\s]*/)[0].length / 2 || 0;
     const trimmed = line.trim();
     if (trimmed.startsWith("# ")) return { type: "h1", length: 2, indent };
