@@ -26,7 +26,7 @@ export const AIButton = () => {
   }, []);
 
   return (
-    <div className={style.floatingButtonContainer}>
+    <div className={style.floatingButtonContainer} data-onboarding="ai-button">
       <div ref={modalRef}>
         {isOpen && <AIModal onCloseButton={handleClose} />}
         <button onClick={() => setIsOpen((prev) => !prev)} className={style.buttonContainer}>
