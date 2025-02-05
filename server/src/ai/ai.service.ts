@@ -6,6 +6,7 @@ import {
   RemotePageCreateOperation,
   RemoteCharInsertOperation,
   CRDTOperation,
+  RemoteBlockUpdateOperation,
 } from "@noctaCrdt/types/Interfaces";
 import { Block } from "@noctaCrdt/Node";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
@@ -24,17 +25,12 @@ export class AiService {
     private readonly workspaceService: WorkSpaceService,
   ) {}
 
-  // CLOVA Studio API에 요청을 보내는 로직
-  // 문자열 받고
-  // 문자열을 CRDT로 변환
-  // CRDT 연산들 적용해서 브로드캐스트
   async requestAI(message: string): Promise<any> {
     const payload = {
       messages: [
         {
           role: "system",
-          content:
-            "내가 특정 문서를 해달라고 하면 마크다운 문법 양식으로 답변해줘.\n제목 1\n소제목 1\n설명 1\n리스트 1\n리스트 2\n순서리스트 1\n순서리스트 2\n\n문서를 작성하는 질문이 아닌 경우에는 해당 주제에 관련한 문서 양식으로 답변해\n\n마크다운 문법 종류는 다음과 같고 \nh1, h2, h3, p, blockquote, checkbox, ul, ol\n\n줄바꿈의 경우 두줄 이상 띄어쓰지 않아야해",
+          content: process.env.CLOVASTUDIO_PROMPT,
         },
         {
           role: "user",
@@ -43,7 +39,7 @@ export class AiService {
       ],
       topP: 0.8,
       topK: 0,
-      maxTokens: 10,
+      maxTokens: 512,
       temperature: 0.5,
       repeatPenalty: 5.0,
       stopBefore: [],
@@ -62,15 +58,12 @@ export class AiService {
       })
       .pipe(
         map((res) => {
-          // console.log(res);
           return res.data;
         }),
       );
 
     const response = await lastValueFrom(response$);
     const completionText = this.parseClovaSSEBackward(response);
-
-    // console.log(completionText);
 
     return completionText;
   }
@@ -107,11 +100,16 @@ export class AiService {
     clientId: number,
     document: String,
   ): Promise<Operation[]> {
+    const documentLines = document.split("\n");
+    let title = documentLines[0];
+    const { type, length, indent } = this.parseBlockType(title);
+    title = title.slice(length + indent * 2);
+
     const operations = [];
     // 새 페이지를 생성해서 DB에 업데이트
     const workspace = await this.workspaceService.getWorkspace(workspaceId);
     const newEditorCRDT = new EditorCRDT(clientId);
-    const newPage = new Page(nanoid(), "AI 페이지", "Docs", newEditorCRDT);
+    const newPage = new Page(nanoid(), title, "Docs", newEditorCRDT);
     workspace.pageList.push(newPage);
     this.workspaceService.updateWorkspace(workspace);
     // 페이지 생성 연산 추가
@@ -125,8 +123,6 @@ export class AiService {
     let blockClock = 0;
     let charClock = 0;
 
-    const documentLines = document.split("\n");
-
     let lastBlock = null;
     documentLines.forEach((line) => {
       const { type, length, indent } = this.parseBlockType(line);
@@ -136,6 +132,8 @@ export class AiService {
       newBlock.prev = lastBlock ? lastBlock.id : null;
       newBlock.type = type;
       newBlock.indent = indent;
+      newBlock.animation = type === "h1" ? "rainbow" : type === "h2" ? "highlight" : "none";
+
       if (lastBlock) {
         lastBlock.next = newBlock.id;
       }
@@ -147,9 +145,46 @@ export class AiService {
         pageId: newPage.id,
       } as RemoteBlockInsertOperation);
 
+      operations.push({
+        type: "blockUpdate",
+        node: newBlock,
+        pageId: newPage.id,
+      } as RemoteBlockUpdateOperation);
+
       const slicedLine = [...line.slice(length + indent * 2)];
       let lastNode = null;
-      slicedLine.forEach((char) => {
+
+      let bold = false;
+      let italic = false;
+      let underline = false;
+      let strikethrough = false;
+
+      for (let i = 0; i < slicedLine.length; ++i) {
+        const char = slicedLine[i];
+
+        if (char === "*") {
+          if (i < slicedLine.length - 1 && slicedLine[i + 1] === "*") {
+            bold = !bold;
+            i++;
+            continue;
+          } else {
+            italic = !italic;
+            continue;
+          }
+        } else if (char === "~") {
+          if (i < slicedLine.length - 1 && slicedLine[i + 1] === "~") {
+            strikethrough = !strikethrough;
+            i++;
+            continue;
+          }
+        } else if (char === "_") {
+          if (i < slicedLine.length - 1 && slicedLine[i + 1] === "_") {
+            underline = !underline;
+            i++;
+            continue;
+          }
+        }
+
         const charNode = new Char(char, new CharId(charClock++, clientId));
         charNode.next = null;
         charNode.prev = lastNode ? lastNode.id : null;
@@ -161,35 +196,24 @@ export class AiService {
 
         lastNode = charNode;
 
+        const styles = [];
+        if (bold) styles.push("bold");
+        if (italic) styles.push("italic");
+        if (underline) styles.push("underline");
+        if (strikethrough) styles.push("strikethrough");
+
         operations.push({
           type: "charInsert",
           node: charNode,
           blockId: newBlock.id,
           pageId: newPage.id,
-          style: charNode.style || [],
+          style: styles,
           color: charNode.color ? charNode.color : "black",
           backgroundColor: charNode.backgroundColor ? charNode.backgroundColor : "transparent",
         } as RemoteCharInsertOperation);
-      });
-
-      // TODO: 스타일 적용
-      // let start = 0, end = 0;
-      // while 순회 end <-
-      // 특수기호 *, **, ~~, __
-      // 여는 애, 닫힌 애 **ㅁㄴㅇㄻㄴㅇㄹ**
-      // stack [], cur **
-      // stack [**], cur ㅁ
-      // ...
-      // stack [**], cur **
-      // stack [], cur EOF
+      }
     });
 
-    // 클라이언트에서 workspaceId, clientId, message 받아옴
-    // 워크스페이스에서 페이지 생성 -> pageId: string(uuid)
-    // 매 줄 처음마다 블록 생성 -> blockId: {client, clock}
-    // 문자를 돌면서 CRDTOperation 연산 생성
-    // 서식 문자(**, *, ~, __)를 만나면 해당 문자는 연산을 만들지 않고, 내부 글자에 대해 스타일 속성 추가후 연산 생성
-    // 연산 배열 리턴
     return operations;
   }
 
@@ -199,8 +223,7 @@ export class AiService {
     const crdtOperations = operations.slice(1);
     this.workspaceService.getServer().to(workspaceId).emit("create/page", pageOperation);
 
-    operations.forEach((operation) => {
-      console.log(operation);
+    crdtOperations.forEach((operation) => {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     });
 
@@ -222,6 +245,4 @@ export class AiService {
     if (trimmed === "---") return { type: "hr", length: 0, indent };
     return { type: "p", length: 0, indent };
   }
-
-  parseCharType() {}
 }
