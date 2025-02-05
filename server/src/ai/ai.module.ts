@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
+import { HttpModule } from "@nestjs/axios";
 import { PassportModule } from "@nestjs/passport";
 import { AiService } from "./ai.service";
 import { AiController } from "./ai.controller";
@@ -16,6 +17,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
     AuthModule,
     WorkspaceModule,
     PassportModule,
+    HttpModule,
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
