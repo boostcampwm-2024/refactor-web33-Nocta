@@ -41,7 +41,7 @@ export const iconBox = css({
   transition: "filter 0.3s ease",
   cursor: "pointer",
   "&:hover": {
-    scale: 1.2,
+    scale: 1.1,
   },
 });
 export const loadingOverlay = css({
