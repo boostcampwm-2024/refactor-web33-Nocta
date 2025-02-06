@@ -1,5 +1,5 @@
 # 1. Node.js 20 기반 빌드 이미지
-FROM node:20
+FROM node:20 AS build
 WORKDIR /app
 
 # 2. 모노레포 루트에서 필요한 파일 복사
