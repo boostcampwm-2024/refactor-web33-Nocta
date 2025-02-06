@@ -27,7 +27,7 @@ export const ToastProgress = css({
   position: "absolute",
   left: "0px",
   bottom: "0px",
-  borderRadius: "lg",
+  borderRightRadius: "lg",
   width: "100%",
   height: "6px",
   backgroundColor: "blue",
