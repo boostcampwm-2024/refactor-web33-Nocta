@@ -100,18 +100,18 @@ export class AiService {
     document: string,
   ): Promise<Operation[]> {
     const documentLines = document.split("\n");
+
+    // 페이지 제목 결정
     let title = documentLines.at(0);
     const { type, length, indent } = this.parseBlockType(title);
     title = title.slice(length + indent * 2);
 
     const operations = [];
-    // 새 페이지를 생성해서 DB에 업데이트
-    const workspace = await this.workspaceService.getWorkspace(workspaceId);
+
+    // 새 페이지 생성 후 페이지 생성 연산 추가
     const newEditorCRDT = new EditorCRDT(clientId);
     const newPage = new Page(nanoid(), title, "Docs", newEditorCRDT);
-    workspace.pageList.push(newPage);
-    this.workspaceService.updateWorkspace(workspace);
-    // 페이지 생성 연산 추가
+
     operations.push({
       type: "pageCreate",
       workspaceId,
@@ -119,10 +119,10 @@ export class AiService {
       page: newPage.serialize(),
     } as RemotePageCreateOperation);
 
+    // 블록 생성 연산 추가
     let blockClock = 0;
-    let charClock = 0;
-
     let lastBlock = null;
+
     documentLines.forEach((line) => {
       const { type, length, indent } = this.parseBlockType(line);
 
@@ -138,7 +138,7 @@ export class AiService {
         lastBlock.next = newBlock.id;
       }
       lastBlock = newBlock;
-      // 블록 추가 연산
+
       operations.push({
         type: "blockInsert",
         node: newBlock,
@@ -151,8 +151,11 @@ export class AiService {
         pageId: newPage.id,
       } as RemoteBlockUpdateOperation);
 
+      // 문자 생성 연산 추가
       const slicedLine = [...line.slice(length + indent * 2)];
       let lastNode = null;
+
+      let charClock = 0;
 
       let bold = false;
       let italic = false;
@@ -190,7 +193,6 @@ export class AiService {
         charNode.next = null;
         charNode.prev = lastNode ? lastNode.id : null;
 
-        // 이전 노드가 있는 경우, 해당 노드의 next를 현재 노드로 설정
         if (lastNode) {
           lastNode.next = charNode.id;
         }
@@ -218,10 +220,14 @@ export class AiService {
     return operations;
   }
 
-  // CRDT 연산들을 페이지에 적용하고 다른 클라이언트에 뿌리는 로직 (workspace.service)
-  emitOperations(workspaceId: string, operations: Operation[]) {
-    const pageOperation = operations.at(0);
+  // CRDT 연산들을 페이지에 적용하고 다른 클라이언트에 브로드캐스트
+  async emitOperations(workspaceId: string, operations: Operation[]) {
+    const pageOperation = operations.at(0) as RemotePageCreateOperation;
     const crdtOperations = operations.slice(1);
+
+    const workspace = await this.workspaceService.getWorkspace(workspaceId);
+    workspace.pageList.push(pageOperation.page);
+    await this.workspaceService.updateWorkspace(workspace);
     this.workspaceService.getServer().to(workspaceId).emit("create/page", pageOperation);
 
     crdtOperations.forEach((operation) => {
