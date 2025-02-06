@@ -21,6 +21,11 @@ export const inputContainer = css({
   backgroundColor: "white/80",
 });
 
+export const inputWrapper = css({
+  position: "relative",
+  flex: 1,
+});
+
 export const inputBox = css({
   outline: "none",
   width: "full",
@@ -29,8 +34,25 @@ export const inputBox = css({
 
 export const iconBox = css({
   display: "flex",
+  position: "relative",
   justifyContent: "center",
   alignItems: "center",
   width: "36px",
+  transition: "filter 0.3s ease",
   cursor: "pointer",
+  "&:hover": {
+    scale: 1.1,
+  },
+});
+export const loadingOverlay = css({
+  display: "flex",
+  zIndex: 10,
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  justifyContent: "center",
+  alignItems: "center",
+  backgroundColor: "rgba(255, 255, 255, 0.8)",
 });
