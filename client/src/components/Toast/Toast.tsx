@@ -48,6 +48,9 @@ export const Toast = ({ message, duration = 3000, onClose }: ToastProps) => {
         animate={{ width: "100%" }}
         transition={{ duration: duration / 1000, ease: "easeOut" }}
         className={ToastProgress}
+        style={{
+          backgroundColor: message === "올바른 명령을 작성해주세요" ? "#E25D68" : "#6293E5",
+        }}
       />
 
       <span className="text-sm">{message}</span>

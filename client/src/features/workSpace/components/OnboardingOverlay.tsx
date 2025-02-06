@@ -60,6 +60,12 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
       description: "열려있는 페이지들을 쉽게 전환할 수 있어요.",
       position: "top",
     },
+    {
+      target: '[data-onboarding="ai-button"]',
+      title: "AI 문서작성 버튼",
+      description: "AI의 도움을 받아 쉽게 페이지를 작성하세요",
+      position: "left",
+    },
   ];
   useEffect(() => {
     const hasCompletedOnboarding = sessionStorage.getItem("hasCompletedOnboarding");
@@ -116,7 +122,7 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
       },
       left: {
         left: targetRect.left - 280,
-        top: targetRect.top + targetRect.height / 2 - 60,
+        top: targetRect.top + targetRect.height / 2 - 190,
       },
       top: {
         left: targetRect.left + targetRect.width / 2 + 40,

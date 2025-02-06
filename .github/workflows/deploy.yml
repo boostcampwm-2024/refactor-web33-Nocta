@@ -28,4 +28,4 @@ jobs:
 
       # 3. Clean up Old Images
       - name: Remove Dangling Images
-        run: docker image prune -a -f
+        run: docker image prune -f

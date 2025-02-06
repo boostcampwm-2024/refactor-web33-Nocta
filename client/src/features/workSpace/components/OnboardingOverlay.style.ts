@@ -9,7 +9,7 @@ export const overlayContainer = css({
 export const highlightBox = css({
   position: "absolute",
   borderColor: "rgba(168, 85, 247, 0.5)", // purple-400 with 50% opacity
-  borderRadius: "xl",
+  borderRadius: "0",
   borderWidth: "2px",
   backgroundColor: "rgba(255, 255, 255, 0.1)",
   pointerEvents: "none",

@@ -12,6 +12,7 @@ export const ToastWrapper = css({
   color: "white",
   backgroundColor: "gray.700",
   boxShadow: "lg",
+  overflow: "hidden",
   // overflow: "hidden", // progress bar가 넘치지 않도록
   transition: "all",
   transitionDuration: "300ms",
