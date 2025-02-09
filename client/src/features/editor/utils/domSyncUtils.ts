@@ -60,9 +60,14 @@ const getClassNames = (state: TextStyleState): string => {
 };
 export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
   const chars = block.crdt.LinkedList.spread();
+
+  let caretNode: Node | undefined;
+
   const selection = window.getSelection();
-  const range = selection?.getRangeAt(0);
-  let caretNode = range?.startContainer;
+  if (selection && selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    caretNode = range.startContainer;
+  }
 
   if (chars.length === 0) {
     while (element.firstChild) {
