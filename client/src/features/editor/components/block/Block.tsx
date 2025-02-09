@@ -288,7 +288,7 @@ export const Block: React.FC<BlockProps> = memo(
       if (blockRef.current) {
         setInnerHTML({ element: blockRef.current, block });
       }
-    }, [getTextAndStylesHash(block)]);
+    }, [virtualIndex, getTextAndStylesHash(block)]);
 
     // useEffect(() => {
     //   console.log(block.crdt);
