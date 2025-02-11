@@ -49,15 +49,15 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
               className={style.inputBox}
               disabled={isLoading}
             />
-            {isLoading && (
+          </div>
+          <div className={style.iconBox} onClick={!isLoading ? handleSubmit : undefined}>
+            {isLoading ? (
               <div className={style.loadingOverlay}>
                 <LoadingSpinner size={50} />
               </div>
+            ) : (
+              <FaLocationArrow />
             )}
-          </div>
-          <div className={style.iconBox} onClick={!isLoading ? handleSubmit : undefined}>
-            {isLoading && <div className={style.loadingOverlay}></div>}
-            <FaLocationArrow />
           </div>
         </div>
       </div>
