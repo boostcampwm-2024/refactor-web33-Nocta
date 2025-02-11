@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import CloseIcon from "@assets/icons/close.svg?react";
 import {
   overlayContainer,
@@ -28,7 +28,7 @@ interface OnboardingOverlayProps {
 export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-
+  const overlayRef = useRef<HTMLDivElement>(null);
   const steps: Step[] = [
     {
       target: '[data-onboarding="menu-button"]',
@@ -69,7 +69,6 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
   ];
   useEffect(() => {
     const hasCompletedOnboarding = sessionStorage.getItem("hasCompletedOnboarding");
-
     if (isShow && hasCompletedOnboarding === null) {
       // 요소들이 렌더링될 시간을 주기 위해 약간의 딜레이 추가
       const timer = setTimeout(() => {
@@ -80,12 +79,27 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
     }
   }, [isShow]);
 
+  useEffect(() => {
+    if (isVisible) {
+      const focusTimer = setTimeout(() => {
+        overlayRef.current?.focus();
+      }, 50);
+
+      return () => clearTimeout(focusTimer);
+    }
+  }, [isVisible]);
+
   const handleClose = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep((prev) => prev + 1);
     } else {
       setIsVisible(false);
       sessionStorage.setItem("hasCompletedOnboarding", "true");
+    }
+  };
+  const handleEnter = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter") {
+      handleClose();
     }
   };
   const handlePrevious = () => {
@@ -145,10 +159,13 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
 
   return (
     <motion.div
+      ref={overlayRef}
+      tabIndex={0}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className={overlayContainer}
+      onKeyDown={(e) => handleEnter(e)}
     >
       {targetPosition && (
         <motion.div
