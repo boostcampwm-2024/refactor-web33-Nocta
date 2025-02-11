@@ -146,7 +146,7 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
         zIndex: getZIndex(),
         isActive: true,
         isVisible: true,
-        isLoaded: false,
+        isLoaded: true,
         serializedEditorData,
       } as Page,
     ]);
