@@ -8,6 +8,7 @@ import {
   RemoteCharDeleteOperation,
   CRDTOperation,
   RemoteBlockUpdateOperation,
+  RemoteCharUpdateOperation,
 } from "@noctaCrdt/types/Interfaces";
 import { Block, Char } from "@noctaCrdt/Node";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
@@ -36,7 +37,7 @@ interface PageCreator {
 
   specifiedBlockType: boolean;
   /*
-  `    ### `
+  `   ### `
   공백을 받았을 때 전에 받은게 공백이 아니면 블록 타입 지정 로직 수행
   예외 : *|~|_
   specifiedBlocType = true;
@@ -44,11 +45,11 @@ interface PageCreator {
   `    ### abcd asdfasdf`
   */
 
-  // 스타일 상태
-  bold: boolean;
-  italic: boolean;
-  underline: boolean;
-  strikethrough: boolean;
+  // 스타일 시작 위치
+  bold: CharId | null;
+  italic: CharId | null;
+  underline: CharId | null;
+  strikethrough: CharId | null;
 }
 
 @Injectable()
@@ -72,7 +73,7 @@ export class AiService {
       ],
       topP: 0.8,
       topK: 0,
-      maxTokens: 100,
+      maxTokens: 300,
       temperature: 0.5,
       repeatPenalty: 5.0,
       stopBefore: [],
@@ -81,6 +82,25 @@ export class AiService {
     };
 
     try {
+      let eventBuffer: SSEEvent = {};
+      let pageCreator: PageCreator = {
+        currentPage: null,
+        currentBlock: null,
+        lastBlock: null,
+        blockClock: 0,
+        charClock: 0,
+        currentLine: "",
+        lastChar: null,
+        bold: null,
+        italic: null,
+        underline: null,
+        strikethrough: null,
+        specifiedBlockType: false,
+      };
+
+      // 페이지 초기화
+      pageCreator.currentPage = await this.createNewPage(clientId, "AI 응답", workspaceId);
+
       // Axios가 응답을 스트림으로 반환하도록 설정합니다.
       const response = await this.axiosHttpService.axiosRef.post(
         process.env.CLOVASTUDIO_API_URL,
@@ -108,26 +128,8 @@ export class AiService {
         crlfDelay: Infinity,
       });
 
-      let eventBuffer: SSEEvent = {};
-      let pageCreator: PageCreator = {
-        currentPage: null,
-        currentBlock: null,
-        lastBlock: null,
-        blockClock: 0,
-        charClock: 0,
-        currentLine: "",
-        lastChar: null,
-        bold: false,
-        italic: false,
-        underline: false,
-        strikethrough: false,
-        specifiedBlockType: false,
-      };
-
-      // 페이지 초기화
-      pageCreator.currentPage = await this.createNewPage(clientId, "AI 응답", workspaceId);
-
       rl.on("line", (line: string) => {
+        // console.log(line);
         // 공백 라인이 나오면 이벤트 구분자로 판단하고, 지금까지 버퍼에 담긴 이벤트를 처리합니다.
         if (!line.trim()) {
           if (Object.keys(eventBuffer).length > 0) {
@@ -163,6 +165,7 @@ export class AiService {
         if (Object.keys(eventBuffer).length > 0) {
           this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
         }
+        this.processToken("\n", workspaceId, clientId, pageCreator);
         console.log("SSE 스트림이 종료되었습니다.");
       });
 
@@ -181,9 +184,10 @@ export class AiService {
     clientId: number,
     pageCreator: PageCreator,
   ): Promise<void> {
-    console.log("받은 이벤트:", event);
+    if (event.event === "result") console.log("= 토큰 => ", event.data.message);
     if (event.event !== "token") return;
     const token = event.data.message?.content || "";
+    // console.log("받은 토큰:", token);
     await this.processToken(token, workspaceId, clientId, pageCreator);
   }
 
@@ -203,131 +207,162 @@ export class AiService {
       `    ### abcd asdfasdf`
       */
       const char = token[i];
+      console.log("char : " + char);
 
       if (!pageCreator.currentBlock) {
         pageCreator.currentBlock = await this.createNewBlock(workspaceId, clientId, pageCreator);
         pageCreator.specifiedBlockType = false;
       }
 
+      if (char === "\n") {
+        // 임시 저장된 토큰 반영
+        const line = pageCreator.currentLine;
+        pageCreator.currentLine = "";
+        pageCreator.specifiedBlockType = true;
+        await this.processToken(line, workspaceId, clientId, pageCreator);
+
+        // 새 블록 준비
+        pageCreator.lastChar = null;
+        pageCreator.currentBlock = null;
+        pageCreator.charClock = 0;
+        pageCreator.bold = null;
+        pageCreator.italic = null;
+        pageCreator.underline = null;
+        pageCreator.strikethrough = null;
+        pageCreator.specifiedBlockType = false;
+        continue;
+      }
+
       if (!pageCreator.specifiedBlockType) {
         pageCreator.currentLine += char;
-        if (char === " " && pageCreator.currentLine.at(-1) !== " ") {
-          await this.updateCurrentBlock(workspaceId, clientId, pageCreator);
+        if (char === " " && pageCreator.currentLine.at(-2) !== " ") {
+          await this.updateCurrentBlock(workspaceId, pageCreator);
+          pageCreator.specifiedBlockType = true;
           if (pageCreator.currentBlock.type === "p") {
             // currentLine에서 indent만큼 공백 지우고
             // 남은 것들에 대해서
             // 스타일 문법이면 변환해서 스타일 적용
             // 아니면 insertChar
+            const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
+            pageCreator.currentLine = "";
+            await this.processToken(line, workspaceId, clientId, pageCreator);
           }
-          pageCreator.specifiedBlockType = true;
+          pageCreator.currentLine = "";
         }
         continue;
-      }
-
-      if (char === "\n") {
-        // 새 블록 준비
-        pageCreator.currentLine = "";
-        pageCreator.lastChar = null;
-        pageCreator.currentBlock = null;
-        pageCreator.charClock = 0;
-        pageCreator.bold = false;
-        pageCreator.italic = false;
-        pageCreator.underline = false;
-        pageCreator.strikethrough = false;
-        pageCreator.specifiedBlockType = false;
       }
 
       // 스타일 문법이면 변환해서 스타일 적용
       // 아니면 insertChar
+      // asdf**asd**fasd
+      // aa***asd***aa
+      // b 0 i 0  asdf
+      // b 0 i 1  asdf*
+      // b 1 i 0  asdf**
+      // b 1 i 1  asdf***asdf
+      // b 1 i 0  asdf***asdf* -> asdf**asdf
+      // b 1 i 1  asdf**asdf*
+      //          asdf**asdf**
 
       if (char === "*") {
-        if (pageCreator.currentLine === "*") {
-          pageCreator.bold = !pageCreator.bold;
-          i += 1;
-          continue;
-        } else {
-          pageCreator.italic = pageCreator.italic;
-          continue;
-        }
-      } else if (char === "~") {
-        if (pageCreator.currentLine === "~") {
-          pageCreator.strikethrough = !pageCreator.strikethrough;
-          i += 1;
-          continue;
-        } else {
-          if (pageCreator.currentLine !== "") {
-            this.createNewChar(pageCreator.currentLine, workspaceId, clientId, pageCreator);
-            pageCreator.currentLine = "";
+        if (pageCreator.lastChar && pageCreator.lastChar.value === "*") {
+          if (pageCreator.italic) {
+            pageCreator.italic = null;
+          } else {
+            pageCreator.italic = (
+              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+            ).id;
+            continue;
           }
-          pageCreator.currentLine = char;
-        }
-      } else if (char === "_") {
-        if (pageCreator.currentLine === "_") {
-          pageCreator.underline = pageCreator.underline;
-          i += 1;
-          continue;
-        } else {
-          if (pageCreator.currentLine !== "") {
-            this.createNewChar(pageCreator.currentLine, workspaceId, clientId, pageCreator);
-            pageCreator.currentLine = "";
+          if (pageCreator.bold) {
+            let curNode = pageCreator.lastChar;
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            while (!curNode.id.equals(pageCreator.bold)) {
+              this.updateCurrentChar("bold", curNode.id, workspaceId, pageCreator);
+              curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            }
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+
+            pageCreator.bold = null;
+          } else {
+            pageCreator.bold = (
+              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+            ).id;
           }
-          pageCreator.currentLine = char;
-        }
-      }
-
-      /*
-      if (char === "\n" && this.currentBlock) {
-        // 현재 블록 마무리
-        await this.updateCurrentBlock(workspaceId, clientId);
-
-        // 새 블록 준비
-        this.currentLine = "";
-        this.lastChar = null;
-        this.currentBlock = null;
-        this.charClock = 0;
-        this.blockClock = 0;
-
-        this.bold = false;
-        this.italic = false;
-        this.underline = false;
-        this.strikethrough = false;
-        continue;
-      }
-
-      // 현재 라인에 문자 추가 (마크다운 문법 파싱용)
-      this.currentLine += char;
-
-      if (char === "*") {
-        if (i < token.length - 1 && token[i + 1] === "*") {
-          this.bold = !this.bold;
-          i += 1;
           continue;
         } else {
-          this.italic = !this.italic;
+          if (pageCreator.italic) {
+            let curNode = pageCreator.lastChar;
+            while (!curNode.id.equals(pageCreator.italic)) {
+              this.updateCurrentChar("italic", curNode.id, workspaceId, pageCreator);
+              curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            }
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+
+            pageCreator.italic = null;
+          } else {
+            pageCreator.italic = (
+              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+            ).id;
+          }
           continue;
         }
-      } else if (char === "~") {
-        if (i < token.length - 1 && token[i + 1] === "~") {
-          this.strikethrough = !this.strikethrough;
-          i += 1;
+      }
+      if (char === "~") {
+        if (pageCreator.lastChar && pageCreator.lastChar.value === "~") {
+          if (pageCreator.strikethrough) {
+            // 취소선 문법이 들어옴
+            // pageCreator.strikethrough = ~~iii~~
+            // lastchar 삭제
+            // strikethrough가 나올 때까지 뒤로 가면서 node 업데이트
+            // strikethrough 만나면 이거 지우고
+            // strikethrough 이전 노드까지 지우고
+            let curNode = pageCreator.lastChar;
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            while (!curNode.id.equals(pageCreator.strikethrough)) {
+              this.updateCurrentChar("strikethrough", curNode.id, workspaceId, pageCreator);
+              curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            }
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+
+            pageCreator.strikethrough = null;
+          } else {
+            pageCreator.strikethrough = (
+              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+            ).id;
+          }
           continue;
         }
-      } else if (char === "_") {
-        if (i < token.length - 1 && token[i + 1] === "_") {
-          this.underline = !this.underline;
-          i += 1;
+      }
+      if (char === "_") {
+        if (pageCreator.lastChar && pageCreator.lastChar.value === "_") {
+          // 밑줄 문법
+          if (pageCreator.underline) {
+            let curNode = pageCreator.lastChar;
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            while (!curNode.id.equals(pageCreator.underline)) {
+              this.updateCurrentChar("underline", curNode.id, workspaceId, pageCreator);
+              curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
+            }
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+
+            pageCreator.underline = null;
+          } else {
+            pageCreator.underline = (
+              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+            ).id;
+          }
           continue;
         }
       }
 
-      // 필요한 경우 새 블록 생성
-      if (!this.currentBlock) {
-        await this.createNewBlock(workspaceId, clientId);
-      }
-
-      // 실제 컨텐츠 추가
-      await this.createNewChar(char, workspaceId, clientId);
-      */
+      await this.createNewChar(char, workspaceId, clientId, pageCreator);
     }
   }
 
@@ -381,7 +416,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
-  ) {
+  ): Promise<Char> {
     const charNode = new Char(char, new CharId(pageCreator.charClock++, clientId));
     charNode.next = null;
     charNode.prev = pageCreator.lastChar ? pageCreator.lastChar.id : null;
@@ -392,36 +427,62 @@ export class AiService {
 
     pageCreator.lastChar = charNode;
 
-    // 현재 활성화된 스타일 수집
-    const styles = [];
-    if (pageCreator.bold) styles.push("bold");
-    if (pageCreator.italic) styles.push("italic");
-    if (pageCreator.underline) styles.push("underline");
-    if (pageCreator.strikethrough) styles.push("strikethrough");
-
     // 문자 삽입 연산 전송
     const charOperation: RemoteCharInsertOperation = {
       type: "charInsert",
       node: charNode,
       blockId: pageCreator.currentBlock.id,
       pageId: pageCreator.currentPage.id,
-      style: styles,
+      style: [],
       color: "black",
       backgroundColor: "transparent",
     };
 
+    pageCreator.currentBlock.crdt.remoteInsert(charOperation);
+
+    await this.emitOperation(workspaceId, charOperation);
+    return charNode;
+  }
+
+  private async updateCurrentChar(
+    type: "bold" | "italic" | "underline" | "strikethrough",
+    charId: CharId,
+    workspaceId: string,
+    pageCreator: PageCreator,
+  ) {
+    const charNode = pageCreator.currentBlock.crdt.LinkedList.getNode(charId);
+    charNode.style.push(type);
+    const charOperation: RemoteCharUpdateOperation = {
+      type: "charUpdate",
+      node: charNode,
+      blockId: pageCreator.currentBlock.id,
+      pageId: pageCreator.currentPage.id,
+    };
+
+    pageCreator.currentBlock.crdt.remoteUpdate(charOperation);
     await this.emitOperation(workspaceId, charOperation);
   }
 
-  private async updateCurrentBlock(
-    workspaceId: string,
-    clientId: number,
-    pageCreator: PageCreator,
-  ) {
+  private async deleteCurrentChar(charId: CharId, workspaceId: string, pageCreator: PageCreator) {
+    const charOperation: RemoteCharDeleteOperation = {
+      type: "charDelete",
+      targetId: charId,
+      clock: 0,
+      blockId: pageCreator.currentBlock.id,
+      pageId: pageCreator.currentPage.id,
+    };
+
+    pageCreator.currentBlock.crdt.remoteDelete(charOperation);
+    await this.emitOperation(workspaceId, charOperation);
+  }
+
+  private async updateCurrentBlock(workspaceId: string, pageCreator: PageCreator) {
     if (!pageCreator.currentBlock || !pageCreator.currentLine.trim()) return;
 
     // 블록 타입 판정
+    console.log("currentLine:", pageCreator.currentLine);
     const { type, length, indent } = this.parseBlockType(pageCreator.currentLine);
+    console.log("type:", type);
 
     // 블록 속성 업데이트
     pageCreator.currentBlock.type = type;
@@ -453,6 +514,7 @@ export class AiService {
     if (operation.type !== "pageCreate") {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     }
+    console.log(operation.type);
     this.workspaceService
       .getServer()
       .to(workspaceId)
@@ -469,6 +531,10 @@ export class AiService {
         return "update/block";
       case "charInsert":
         return "insert/char";
+      case "charDelete":
+        return "delete/char";
+      case "charUpdate":
+        return "update/char";
       default:
         return "batch/operations";
     }
@@ -477,14 +543,14 @@ export class AiService {
   parseBlockType(line: string): { type: ElementType; length: number; indent: number } {
     const indent = line.match(/^[\s]*/)[0].length / 2 || 0;
     const trimmed = line.trim();
-    if (trimmed.startsWith("# ")) return { type: "h1", length: 2, indent };
-    if (trimmed.startsWith("## ")) return { type: "h2", length: 3, indent };
-    if (trimmed.startsWith("### ")) return { type: "h3", length: 4, indent };
-    if (trimmed.startsWith("- ")) return { type: "ul", length: 2, indent };
-    if (/^\d+\. /.test(trimmed)) return { type: "ol", length: 3, indent };
-    if (trimmed.startsWith("> ")) return { type: "blockquote", length: 2, indent };
-    if (trimmed.startsWith("[] ")) return { type: "checkbox", length: 3, indent };
-    if (trimmed.startsWith("[x] ")) return { type: "checkbox", length: 4, indent };
+    if (trimmed.startsWith("###")) return { type: "h3", length: 4, indent };
+    if (trimmed.startsWith("##")) return { type: "h2", length: 3, indent };
+    if (trimmed.startsWith("#")) return { type: "h1", length: 2, indent };
+    if (trimmed.startsWith("-")) return { type: "ul", length: 2, indent };
+    if (/^\d+\./.test(trimmed)) return { type: "ol", length: 3, indent };
+    if (trimmed.startsWith(">")) return { type: "blockquote", length: 2, indent };
+    if (trimmed.startsWith("[]")) return { type: "checkbox", length: 3, indent };
+    if (trimmed.startsWith("[x]")) return { type: "checkbox", length: 4, indent };
     if (trimmed === "---") return { type: "hr", length: 0, indent };
     return { type: "p", length: 0, indent };
   }
