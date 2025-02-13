@@ -483,7 +483,7 @@ export class AiService {
 
     // 블록 타입 판정
     console.log("currentLine:", pageCreator.currentLine);
-    const { type, length, indent } = this.parseBlockType(pageCreator.currentLine);
+    const { type, indent } = this.parseBlockType(pageCreator.currentLine);
     console.log("type:", type);
 
     // 블록 속성 업데이트
