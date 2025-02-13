@@ -83,7 +83,7 @@ export class AiService {
 
     try {
       let eventBuffer: SSEEvent = {};
-      let pageCreator: PageCreator = {
+      const pageCreator: PageCreator = {
         currentPage: null,
         currentBlock: null,
         lastBlock: null,
@@ -389,7 +389,8 @@ export class AiService {
     clientId: number,
     pageCreator: PageCreator,
   ): Promise<Block> {
-    const newBlock = new Block("", new BlockId(pageCreator.blockClock++, clientId));
+    const newBlock = new Block("", new BlockId(pageCreator.blockClock, clientId));
+    pageCreator.blockClock += 1;
     newBlock.next = null;
     newBlock.prev = pageCreator.lastBlock ? pageCreator.lastBlock.id : null;
 
@@ -417,7 +418,8 @@ export class AiService {
     clientId: number,
     pageCreator: PageCreator,
   ): Promise<Char> {
-    const charNode = new Char(char, new CharId(pageCreator.charClock++, clientId));
+    const charNode = new Char(char, new CharId(pageCreator.charClock, clientId));
+    pageCreator.charClock += 1;
     charNode.next = null;
     charNode.prev = pageCreator.lastChar ? pageCreator.lastChar.id : null;
 
