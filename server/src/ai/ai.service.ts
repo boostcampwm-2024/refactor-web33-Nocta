@@ -118,7 +118,7 @@ export class AiService {
 
       // response.data가 스트림인지 확인
       if (typeof response.data.on !== "function") {
-        console.error("response.data가 스트림이 아닙니다:", response.data);
+        // console.error("response.data가 스트림이 아닙니다:", response.data);
         return;
       }
 
@@ -184,7 +184,7 @@ export class AiService {
     clientId: number,
     pageCreator: PageCreator,
   ): Promise<void> {
-    if (event.event === "result") console.log("= 토큰 => ", event.data.message);
+    // if (event.event === "result") console.log("= 토큰 => ", event.data.message);
     if (event.event !== "token") return;
     const token = event.data.message?.content || "";
     // console.log("받은 토큰:", token);
@@ -207,7 +207,7 @@ export class AiService {
       `    ### abcd asdfasdf`
       */
       const char = token[i];
-      console.log("char : " + char);
+      // console.log("char : " + char);
 
       if (!pageCreator.currentBlock) {
         pageCreator.currentBlock = await this.createNewBlock(workspaceId, clientId, pageCreator);
@@ -482,9 +482,9 @@ export class AiService {
     if (!pageCreator.currentBlock || !pageCreator.currentLine.trim()) return;
 
     // 블록 타입 판정
-    console.log("currentLine:", pageCreator.currentLine);
+    // console.log("currentLine:", pageCreator.currentLine);
     const { type, indent } = this.parseBlockType(pageCreator.currentLine);
-    console.log("type:", type);
+    // console.log("type:", type);
 
     // 블록 속성 업데이트
     pageCreator.currentBlock.type = type;
@@ -516,7 +516,7 @@ export class AiService {
     if (operation.type !== "pageCreate") {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     }
-    console.log(operation.type);
+    // console.log(operation.type);
     this.workspaceService
       .getServer()
       .to(workspaceId)
