@@ -329,10 +329,10 @@ export class WorkSpaceService implements OnModuleInit {
           );
           break;
         default:
-          this.logger.warn("연산 처리 중 알 수 없는 연산 발견:", operation);
+        // this.logger.warn("연산 처리 중 알 수 없는 연산 발견:", operation);
       }
     } catch (error) {
-      this.logger.warn("유효하지 않은 연산:", operation);
+      // this.logger.warn("유효하지 않은 연산:");
     }
   }
 

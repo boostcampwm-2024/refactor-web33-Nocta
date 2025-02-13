@@ -49,13 +49,7 @@ export class AiController {
     @Body() body: { clientId: number; workspaceId: string; message: string },
     @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<void> {
-    const message = await this.aiService.requestAI(body.message);
-    const operations = await this.aiService.generateDocumentToCRDT(
-      body.workspaceId,
-      body.clientId,
-      message,
-    );
-    this.aiService.emitOperations(body.workspaceId, operations);
+    await this.aiService.requestAI(body.message, body.workspaceId, body.clientId);
     res.status(200).send();
   }
 }
