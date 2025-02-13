@@ -53,6 +53,9 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
           clientId: operation.clientId,
         });
         addPage(newPage);
+        if (operation.clientId === clientId) {
+          setPageDataReady(newPage.id, true);
+        }
       },
       onRemotePageDelete: (operation) => {
         addToast(`${operation.clientId}번 유저가 페이지(${operation.pageTitle})를 삭제하였습니다.`);
@@ -146,7 +149,7 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
         zIndex: getZIndex(),
         isActive: true,
         isVisible: true,
-        isLoaded: true,
+        isLoaded: false,
         serializedEditorData,
       } as Page,
     ]);
