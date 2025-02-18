@@ -51,7 +51,7 @@ export const IconBlock = ({
   if (!icon) return null;
 
   return (
-    <div data-testid={testKey} className={iconContainerStyle}>
+    <div contentEditable={false} data-testid={testKey} className={iconContainerStyle}>
       {icon}
     </div>
   );

@@ -72,6 +72,7 @@ export const MenuBlock = ({
 
   return (
     <div
+      contentEditable={false}
       ref={menuBlockRef}
       className={`menu_block ${isOpen ? "option_modal_open" : ""} ${menuBlockStyle}`}
       {...attributes}
