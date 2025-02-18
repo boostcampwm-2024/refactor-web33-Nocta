@@ -20,12 +20,6 @@ import { WorkSpaceService } from "../workspace/workspace.service";
 import { firstValueFrom, lastValueFrom, map } from "rxjs";
 import * as readline from "readline";
 
-interface SSEEvent {
-  id?: string;
-  event?: string;
-  data?: any;
-}
-
 interface PageCreator {
   currentPage: Page | null;
   currentBlock: Block | null;
@@ -54,6 +48,9 @@ interface PageCreator {
 
 @Injectable()
 export class AiService {
+  private tokenQueue: string[] = [];
+  private processingQueue = false;
+
   constructor(
     private axiosHttpService: HttpService,
     private readonly workspaceService: WorkSpaceService,
@@ -61,28 +58,25 @@ export class AiService {
 
   async requestAI(message: string, workspaceId: string, clientId: number): Promise<void> {
     const payload = {
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: process.env.CLOVASTUDIO_PROMPT,
+          content: process.env.AI_PROMPT,
         },
         {
           role: "user",
           content: message,
         },
       ],
-      topP: 0.8,
-      topK: 0,
-      maxTokens: 1024,
-      temperature: 0.5,
-      repeatPenalty: 5.0,
-      stopBefore: [],
-      includeAiFilters: true,
-      seed: 0,
+
+      max_tokens: 1024,
+      temperature: 0.7,
+      top_p: 0.8,
+      stream: true, // 스트리밍 응답 요청
     };
 
     try {
-      let eventBuffer: SSEEvent = {};
       const pageCreator: PageCreator = {
         currentPage: null,
         currentBlock: null,
@@ -102,23 +96,17 @@ export class AiService {
       pageCreator.currentPage = await this.createNewPage(clientId, "AI 응답", workspaceId);
 
       // Axios가 응답을 스트림으로 반환하도록 설정합니다.
-      const response = await this.axiosHttpService.axiosRef.post(
-        process.env.CLOVASTUDIO_API_URL,
-        payload,
-        {
-          headers: {
-            "X-NCP-CLOVASTUDIO-REQUEST-ID": process.env.CLOVASTUDIO_REQUEST_ID,
-            Authorization: `Bearer ${process.env.CLOVASTUDIO_API_KEY}`,
-            "Content-Type": "application/json",
-            Accept: "text/event-stream",
-          },
-          responseType: "stream",
+      const response = await this.axiosHttpService.axiosRef.post(process.env.AI_API_URL, payload, {
+        headers: {
+          Authorization: `Bearer ${process.env.AI_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      );
+        responseType: "stream",
+      });
 
       // response.data가 스트림인지 확인
       if (typeof response.data.on !== "function") {
-        // console.error("response.data가 스트림이 아닙니다:", response.data);
+        console.error("response.data가 스트림이 아닙니다:", response.data);
         return;
       }
 
@@ -129,42 +117,31 @@ export class AiService {
       });
 
       rl.on("line", (line: string) => {
-        // console.log(line);
-        // 공백 라인이 나오면 이벤트 구분자로 판단하고, 지금까지 버퍼에 담긴 이벤트를 처리합니다.
-        if (!line.trim()) {
-          if (Object.keys(eventBuffer).length > 0) {
-            this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-            eventBuffer = {};
-          }
-          return;
-        }
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
 
-        // 새로운 이벤트 시작: 이전 이벤트가 있으면 먼저 처리
-        if (line.startsWith("id:")) {
-          // 만약 이미 버퍼에 이벤트 내용이 있다면 flush 합니다.
-          if (eventBuffer.id || eventBuffer.event || eventBuffer.data) {
-            this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-            eventBuffer = {};
+        // OpenAI 스트림은 "data:" 접두사가 붙습니다.
+        if (trimmedLine.startsWith("data:")) {
+          const dataText = trimmedLine.slice(5).trim();
+
+          // 스트림 종료 시 "[DONE]" 메시지가 옵니다.
+          if (dataText === "[DONE]") {
+            rl.close();
+            return;
           }
-          eventBuffer.id = line.slice(3).trim();
-        } else if (line.startsWith("event:")) {
-          eventBuffer.event = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
-          const dataText = line.slice(5).trim();
+
           try {
-            eventBuffer.data = JSON.parse(dataText);
+            const parsedData = JSON.parse(dataText);
+            // OpenAI의 응답은 choices 배열 내에 delta가 존재합니다.
+            // 예: { choices: [ { delta: { content: "..." } } ] }
+            this.handleSSEEvent(parsedData, workspaceId, clientId, pageCreator);
           } catch (error) {
-            // JSON 파싱이 실패하면 그냥 문자열로 저장합니다.
-            eventBuffer.data = dataText;
+            console.error("JSON 파싱 에러:", error);
           }
         }
       });
 
       rl.on("close", () => {
-        // 스트림 종료 시, 버퍼에 남은 이벤트가 있으면 처리합니다.
-        if (Object.keys(eventBuffer).length > 0) {
-          this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-        }
         this.processToken("\n", workspaceId, clientId, pageCreator);
         console.log("SSE 스트림이 종료되었습니다.");
       });
@@ -179,16 +156,44 @@ export class AiService {
   }
 
   async handleSSEEvent(
-    event: SSEEvent,
+    event: any,
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
   ): Promise<void> {
-    // if (event.event === "result") console.log("= 토큰 => ", event.data.message);
-    if (event.event !== "token") return;
-    const token = event.data.message?.content || "";
-    // console.log("받은 토큰:", token);
-    await this.processToken(token, workspaceId, clientId, pageCreator);
+    // OpenAI의 응답은 choices 배열 내에 delta 객체에 token 내용이 있습니다.
+    if (!event.choices || !Array.isArray(event.choices)) return;
+
+    const [choice, _] = event.choices;
+    if (!choice) return;
+
+    const token = choice.delta?.content || "";
+    if (token) {
+      await this.enqueueToken(token, workspaceId, clientId, pageCreator);
+    }
+  }
+
+  async enqueueToken(
+    token: string,
+    workspaceId: string,
+    clientId: number,
+    pageCreator: PageCreator,
+  ): Promise<void> {
+    // 토큰을 큐에 추가
+    this.tokenQueue.push(token);
+
+    // 만약 현재 큐 처리가 진행 중이지 않다면 시작합니다.
+    if (!this.processingQueue) {
+      this.processingQueue = true;
+      while (this.tokenQueue.length > 0) {
+        // 큐에서 토큰을 하나씩 꺼내어 처리합니다.
+        const tokenToProcess = this.tokenQueue.shift();
+        if (tokenToProcess) {
+          await this.processToken(tokenToProcess, workspaceId, clientId, pageCreator);
+        }
+      }
+      this.processingQueue = false;
+    }
   }
 
   private async processToken(
@@ -207,7 +212,6 @@ export class AiService {
       `    ### abcd asdfasdf`
       */
       const char = token[i];
-      // console.log("char : " + char);
 
       if (!pageCreator.currentBlock) {
         pageCreator.currentBlock = await this.createNewBlock(workspaceId, clientId, pageCreator);
@@ -482,9 +486,7 @@ export class AiService {
     if (!pageCreator.currentBlock || !pageCreator.currentLine.trim()) return;
 
     // 블록 타입 판정
-    // console.log("currentLine:", pageCreator.currentLine);
     const { type, indent } = this.parseBlockType(pageCreator.currentLine);
-    // console.log("type:", type);
 
     // 블록 속성 업데이트
     pageCreator.currentBlock.type = type;
@@ -516,7 +518,6 @@ export class AiService {
     if (operation.type !== "pageCreate") {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     }
-    // console.log(operation.type);
     this.workspaceService
       .getServer()
       .to(workspaceId)
