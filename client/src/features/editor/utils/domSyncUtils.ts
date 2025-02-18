@@ -73,6 +73,8 @@ export const setInnerHTML = ({ element, block }: SetInnerHTMLProps): void => {
     while (element.firstChild) {
       element.removeChild(element.firstChild);
     }
+    // NOTE <br/> 태그 추가
+    element.appendChild(document.createElement("br"));
     return;
   }
 
