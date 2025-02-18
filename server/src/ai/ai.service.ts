@@ -219,11 +219,9 @@ export class AiService {
       }
 
       if (char === "\n") {
-        // 임시 저장된 토큰 반영
-        const line = pageCreator.currentLine;
-        pageCreator.currentLine = "";
-        pageCreator.specifiedBlockType = true;
-        await this.processToken(line, workspaceId, clientId, pageCreator);
+        if (!pageCreator.specifiedBlockType) {
+          await this.checkBlockType(pageCreator, workspaceId, clientId);
+        }
 
         // 새 블록 준비
         pageCreator.lastChar = null;
@@ -247,19 +245,7 @@ export class AiService {
           pageCreator.currentLine.length >= 2 &&
           pageCreator.currentLine.at(-2) !== " "
         ) {
-          console.log(`currentLine : '${pageCreator.currentLine}'`);
-          await this.updateCurrentBlock(workspaceId, pageCreator);
-          pageCreator.specifiedBlockType = true;
-          if (pageCreator.currentBlock.type === "p") {
-            // currentLine에서 indent만큼 공백 지우고
-            // 남은 것들에 대해서
-            // 스타일 문법이면 변환해서 스타일 적용
-            // 아니면 insertChar
-            const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
-            pageCreator.currentLine = "";
-            await this.processToken(line, workspaceId, clientId, pageCreator);
-          }
-          pageCreator.currentLine = "";
+          await this.checkBlockType(pageCreator, workspaceId, clientId);
         }
         continue;
       }
@@ -376,6 +362,21 @@ export class AiService {
 
       await this.createNewChar(char, workspaceId, clientId, pageCreator);
     }
+  }
+
+  private async checkBlockType(pageCreator: PageCreator, workspaceId: string, clientId: number) {
+    await this.updateCurrentBlock(workspaceId, pageCreator);
+    pageCreator.specifiedBlockType = true;
+    if (pageCreator.currentBlock.type === "p") {
+      // currentLine에서 indent만큼 공백 지우고
+      // 남은 것들에 대해서
+      // 스타일 문법이면 변환해서 스타일 적용
+      // 아니면 insertChar
+      const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
+      pageCreator.currentLine = "";
+      await this.processToken(line, workspaceId, clientId, pageCreator);
+    }
+    pageCreator.currentLine = "";
   }
 
   private async createNewPage(clientId: number, title: string, workspaceId: string): Promise<Page> {
@@ -555,6 +556,7 @@ export class AiService {
     const indent = Math.floor(line.match(/^[\s]*/)[0].length / 2) || 0;
     const trimmed = line.trim();
     console.log(line, " : ", indent);
+    if (trimmed === "---") return { type: "hr", length: 0, indent };
     if (trimmed.startsWith("###")) return { type: "h3", length: 4, indent };
     if (trimmed.startsWith("##")) return { type: "h2", length: 3, indent };
     if (trimmed.startsWith("#")) return { type: "h1", length: 2, indent };
@@ -563,7 +565,6 @@ export class AiService {
     if (trimmed.startsWith(">")) return { type: "blockquote", length: 2, indent };
     if (trimmed.startsWith("[]")) return { type: "checkbox", length: 3, indent };
     if (trimmed.startsWith("[x]")) return { type: "checkbox", length: 4, indent };
-    if (trimmed === "---") return { type: "hr", length: 0, indent };
     return { type: "p", length: 0, indent };
   }
 }
