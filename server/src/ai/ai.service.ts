@@ -239,7 +239,15 @@ export class AiService {
 
       if (!pageCreator.specifiedBlockType) {
         pageCreator.currentLine += char;
-        if (char === " " && pageCreator.currentLine.at(-2) !== " ") {
+        // "  -"
+        // " "
+        // "   "
+        if (
+          char === " " &&
+          pageCreator.currentLine.length >= 2 &&
+          pageCreator.currentLine.at(-2) !== " "
+        ) {
+          console.log(`currentLine : '${pageCreator.currentLine}'`);
           await this.updateCurrentBlock(workspaceId, pageCreator);
           pageCreator.specifiedBlockType = true;
           if (pageCreator.currentBlock.type === "p") {
@@ -483,7 +491,7 @@ export class AiService {
   }
 
   private async updateCurrentBlock(workspaceId: string, pageCreator: PageCreator) {
-    if (!pageCreator.currentBlock || !pageCreator.currentLine.trim()) return;
+    if (!pageCreator.currentBlock) return;
 
     // 블록 타입 판정
     const { type, indent } = this.parseBlockType(pageCreator.currentLine);
@@ -544,8 +552,9 @@ export class AiService {
   }
 
   parseBlockType(line: string): { type: ElementType; length: number; indent: number } {
-    const indent = line.match(/^[\s]*/)[0].length / 2 || 0;
+    const indent = Math.floor(line.match(/^[\s]*/)[0].length / 2) || 0;
     const trimmed = line.trim();
+    console.log(line, " : ", indent);
     if (trimmed.startsWith("###")) return { type: "h3", length: 4, indent };
     if (trimmed.startsWith("##")) return { type: "h2", length: 3, indent };
     if (trimmed.startsWith("#")) return { type: "h1", length: 2, indent };
