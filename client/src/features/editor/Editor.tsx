@@ -426,6 +426,7 @@ export const Editor = memo(
           style={{
             height: virtualizer.getTotalSize(),
             position: "relative",
+            outline: "none",
           }}
           contentEditable
           suppressContentEditableWarning
