@@ -5,8 +5,9 @@ const baseBlockStyle = {
   flexDirection: "row",
   alignItems: "center",
   width: "full",
-  minHeight: "16px",
-  backgroundColor: "transparent",
+  minHeight: "24px",
+  marginBottom: "4px",
+  paddingY: "2px",
   "&:hover .menu_block, .menu_block.option_modal_open": {
     opacity: 1,
   },
