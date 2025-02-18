@@ -39,6 +39,7 @@ export class AiController {
       properties: {
         clientId: { type: "number" },
         workspaceId: { type: "string" },
+        socketId: { type: "string" },
         message: { type: "string" },
       },
     },
@@ -46,10 +47,10 @@ export class AiController {
   @ApiResponse({ status: 200, description: "good" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async chat(
-    @Body() body: { clientId: number; workspaceId: string; message: string },
+    @Body() body: { clientId: number; workspaceId: string; socketId: string; message: string },
     @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<void> {
-    await this.aiService.requestAI(body.message, body.workspaceId, body.clientId);
+    await this.aiService.requestAI(body.message, body.workspaceId, body.clientId, body.socketId);
     res.status(200).send();
   }
 }

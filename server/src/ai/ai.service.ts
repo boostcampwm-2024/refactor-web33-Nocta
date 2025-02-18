@@ -9,6 +9,7 @@ import {
   CRDTOperation,
   RemoteBlockUpdateOperation,
   RemoteCharUpdateOperation,
+  RemotePageUpdateOperation,
 } from "@noctaCrdt/types/Interfaces";
 import { Block, Char } from "@noctaCrdt/Node";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
@@ -28,6 +29,7 @@ interface PageCreator {
   blockClock: number;
   charClock: number;
   currentLine: string;
+  pageTitle: string;
 
   specifiedBlockType: boolean;
   /*
@@ -56,7 +58,12 @@ export class AiService {
     private readonly workspaceService: WorkSpaceService,
   ) {}
 
-  async requestAI(message: string, workspaceId: string, clientId: number): Promise<void> {
+  async requestAI(
+    message: string,
+    workspaceId: string,
+    clientId: number,
+    socketId: string,
+  ): Promise<void> {
     const payload = {
       model: "gpt-4o-mini",
       messages: [
@@ -90,10 +97,16 @@ export class AiService {
         underline: null,
         strikethrough: null,
         specifiedBlockType: false,
+        pageTitle: "",
       };
 
       // 페이지 초기화
-      pageCreator.currentPage = await this.createNewPage(clientId, "AI 응답", workspaceId);
+      pageCreator.currentPage = await this.createNewPage(
+        clientId,
+        "생성중...",
+        workspaceId,
+        socketId,
+      );
 
       // Axios가 응답을 스트림으로 반환하도록 설정합니다.
       const response = await this.axiosHttpService.axiosRef.post(process.env.AI_API_URL, payload, {
@@ -134,15 +147,49 @@ export class AiService {
             const parsedData = JSON.parse(dataText);
             // OpenAI의 응답은 choices 배열 내에 delta가 존재합니다.
             // 예: { choices: [ { delta: { content: "..." } } ] }
-            this.handleSSEEvent(parsedData, workspaceId, clientId, pageCreator);
+            this.handleSSEEvent(parsedData, workspaceId, clientId, pageCreator, socketId);
           } catch (error) {
             console.error("JSON 파싱 에러:", error);
           }
         }
       });
 
-      rl.on("close", () => {
-        this.processToken("\n", workspaceId, clientId, pageCreator);
+      rl.on("close", async () => {
+        await this.processToken("\n", workspaceId, clientId, pageCreator, socketId);
+        if (pageCreator.pageTitle)
+          await this.updateCurrentPage(workspaceId, clientId, pageCreator, socketId);
+
+        const currentPage = await this.workspaceService.updatePage(
+          workspaceId,
+          pageCreator.currentPage.id,
+        );
+        const pageCreateOperation = {
+          type: "pageCreate",
+          workspaceId,
+          clientId,
+          page: currentPage.serialize(),
+        } as RemotePageCreateOperation;
+
+        this.workspaceService
+          .getServer()
+          .to(workspaceId)
+          .except(socketId)
+          .emit("create/page", pageCreateOperation);
+
+        const pageUpdateOperation: RemotePageUpdateOperation = {
+          type: "pageUpdate",
+          workspaceId: workspaceId,
+          pageId: pageCreator.currentPage.id,
+          title: pageCreator.pageTitle,
+          icon: pageCreator.currentPage.icon,
+          clientId: clientId,
+        };
+
+        this.workspaceService
+          .getServer()
+          .to(workspaceId)
+          .except(socketId)
+          .emit("update/page", pageUpdateOperation);
         console.log("SSE 스트림이 종료되었습니다.");
       });
 
@@ -160,6 +207,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<void> {
     // OpenAI의 응답은 choices 배열 내에 delta 객체에 token 내용이 있습니다.
     if (!event.choices || !Array.isArray(event.choices)) return;
@@ -169,7 +217,7 @@ export class AiService {
 
     const token = choice.delta?.content || "";
     if (token) {
-      await this.enqueueToken(token, workspaceId, clientId, pageCreator);
+      await this.enqueueToken(token, workspaceId, clientId, pageCreator, socketId);
     }
   }
 
@@ -178,6 +226,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<void> {
     // 토큰을 큐에 추가
     this.tokenQueue.push(token);
@@ -189,7 +238,7 @@ export class AiService {
         // 큐에서 토큰을 하나씩 꺼내어 처리합니다.
         const tokenToProcess = this.tokenQueue.shift();
         if (tokenToProcess) {
-          await this.processToken(tokenToProcess, workspaceId, clientId, pageCreator);
+          await this.processToken(tokenToProcess, workspaceId, clientId, pageCreator, socketId);
         }
       }
       this.processingQueue = false;
@@ -201,6 +250,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ) {
     for (let i = 0; i < token.length; i++) {
       /*
@@ -214,13 +264,18 @@ export class AiService {
       const char = token[i];
 
       if (!pageCreator.currentBlock) {
-        pageCreator.currentBlock = await this.createNewBlock(workspaceId, clientId, pageCreator);
+        pageCreator.currentBlock = await this.createNewBlock(
+          workspaceId,
+          clientId,
+          pageCreator,
+          socketId,
+        );
         pageCreator.specifiedBlockType = false;
       }
 
       if (char === "\n") {
         if (!pageCreator.specifiedBlockType) {
-          await this.checkBlockType(pageCreator, workspaceId, clientId);
+          await this.checkBlockType(pageCreator, workspaceId, clientId, socketId);
         }
 
         // 새 블록 준비
@@ -237,15 +292,12 @@ export class AiService {
 
       if (!pageCreator.specifiedBlockType) {
         pageCreator.currentLine += char;
-        // "  -"
-        // " "
-        // "   "
         if (
           char === " " &&
           pageCreator.currentLine.length >= 2 &&
           pageCreator.currentLine.at(-2) !== " "
         ) {
-          await this.checkBlockType(pageCreator, workspaceId, clientId);
+          await this.checkBlockType(pageCreator, workspaceId, clientId, socketId);
         }
         continue;
       }
@@ -268,25 +320,25 @@ export class AiService {
             pageCreator.italic = null;
           } else {
             pageCreator.italic = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
             continue;
           }
           if (pageCreator.bold) {
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.bold)) {
-              this.updateCurrentChar("bold", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("bold", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.bold = null;
           } else {
             pageCreator.bold = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -294,15 +346,15 @@ export class AiService {
           if (pageCreator.italic) {
             let curNode = pageCreator.lastChar;
             while (!curNode.id.equals(pageCreator.italic)) {
-              this.updateCurrentChar("italic", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("italic", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
 
             pageCreator.italic = null;
           } else {
             pageCreator.italic = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -318,19 +370,25 @@ export class AiService {
             // strikethrough 만나면 이거 지우고
             // strikethrough 이전 노드까지 지우고
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.strikethrough)) {
-              this.updateCurrentChar("strikethrough", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar(
+                "strikethrough",
+                curNode.id,
+                workspaceId,
+                pageCreator,
+                socketId,
+              );
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.strikethrough = null;
           } else {
             pageCreator.strikethrough = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -341,31 +399,36 @@ export class AiService {
           // 밑줄 문법
           if (pageCreator.underline) {
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.underline)) {
-              this.updateCurrentChar("underline", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("underline", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.underline = null;
           } else {
             pageCreator.underline = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
         }
       }
 
-      await this.createNewChar(char, workspaceId, clientId, pageCreator);
+      await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId);
     }
   }
 
-  private async checkBlockType(pageCreator: PageCreator, workspaceId: string, clientId: number) {
-    await this.updateCurrentBlock(workspaceId, pageCreator);
+  private async checkBlockType(
+    pageCreator: PageCreator,
+    workspaceId: string,
+    clientId: number,
+    socketId: string,
+  ) {
+    await this.updateCurrentBlock(workspaceId, pageCreator, socketId);
     pageCreator.specifiedBlockType = true;
     if (pageCreator.currentBlock.type === "p") {
       // currentLine에서 indent만큼 공백 지우고
@@ -374,14 +437,20 @@ export class AiService {
       // 아니면 insertChar
       const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
       pageCreator.currentLine = "";
-      await this.processToken(line, workspaceId, clientId, pageCreator);
+      await this.processToken(line, workspaceId, clientId, pageCreator, socketId);
     }
     pageCreator.currentLine = "";
   }
 
-  private async createNewPage(clientId: number, title: string, workspaceId: string): Promise<Page> {
+  private async createNewPage(
+    clientId: number,
+    title: string,
+    workspaceId: string,
+    socketId: string,
+  ): Promise<Page> {
     const newEditorCRDT = new EditorCRDT(clientId);
     const page = new Page(nanoid(), title, "Docs", newEditorCRDT);
+    page.icon = "AI";
 
     const pageOperation = {
       type: "pageCreate",
@@ -392,8 +461,8 @@ export class AiService {
 
     const workspace = await this.workspaceService.getWorkspace(workspaceId);
     workspace.pageList.push(pageOperation.page);
-    this.workspaceService.updateWorkspace(workspace);
-    await this.emitOperation(workspaceId, pageOperation);
+    await this.workspaceService.updateWorkspace(workspace);
+    this.emitOperation(workspaceId, socketId, pageOperation);
     return page;
   }
 
@@ -401,6 +470,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<Block> {
     const newBlock = new Block("", new BlockId(pageCreator.blockClock, clientId));
     pageCreator.blockClock += 1;
@@ -421,7 +491,7 @@ export class AiService {
       pageId: pageCreator.currentPage.id,
     };
 
-    await this.emitOperation(workspaceId, blockInsertOperation);
+    this.emitOperation(workspaceId, socketId, blockInsertOperation);
     return newBlock;
   }
 
@@ -430,7 +500,10 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<Char> {
+    if (pageCreator.currentBlock.type === "h1") pageCreator.pageTitle += char;
+
     const charNode = new Char(char, new CharId(pageCreator.charClock, clientId));
     pageCreator.charClock += 1;
     charNode.next = null;
@@ -455,7 +528,7 @@ export class AiService {
 
     pageCreator.currentBlock.crdt.remoteInsert(charOperation);
 
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
     return charNode;
   }
 
@@ -464,6 +537,7 @@ export class AiService {
     charId: CharId,
     workspaceId: string,
     pageCreator: PageCreator,
+    socketId: string,
   ) {
     const charNode = pageCreator.currentBlock.crdt.LinkedList.getNode(charId);
     charNode.style.push(type);
@@ -475,10 +549,15 @@ export class AiService {
     };
 
     pageCreator.currentBlock.crdt.remoteUpdate(charOperation);
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
   }
 
-  private async deleteCurrentChar(charId: CharId, workspaceId: string, pageCreator: PageCreator) {
+  private async deleteCurrentChar(
+    charId: CharId,
+    workspaceId: string,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
     const charOperation: RemoteCharDeleteOperation = {
       type: "charDelete",
       targetId: charId,
@@ -488,10 +567,14 @@ export class AiService {
     };
 
     pageCreator.currentBlock.crdt.remoteDelete(charOperation);
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
   }
 
-  private async updateCurrentBlock(workspaceId: string, pageCreator: PageCreator) {
+  private async updateCurrentBlock(
+    workspaceId: string,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
     if (!pageCreator.currentBlock) return;
 
     // 블록 타입 판정
@@ -509,7 +592,46 @@ export class AiService {
       pageId: pageCreator.currentPage.id,
     };
 
-    await this.emitOperation(workspaceId, blockUpdateOperation);
+    this.emitOperation(workspaceId, socketId, blockUpdateOperation);
+  }
+
+  private async updateCurrentPage(
+    workspaceId: string,
+    clientId: number,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
+    if (!pageCreator.currentPage) return;
+
+    const pageUpdateOperation: RemotePageUpdateOperation = {
+      type: "pageUpdate",
+      workspaceId: workspaceId,
+      pageId: pageCreator.currentPage.id,
+      title: pageCreator.pageTitle,
+      icon: "AI",
+      clientId: clientId,
+    };
+
+    const currentWorkspace = await this.workspaceService.getWorkspace(workspaceId);
+    const currentPage = currentWorkspace.pageList.find(
+      (page) => page.id === pageCreator.currentPage.id,
+    );
+    if (!currentPage) {
+      throw new Error(`Page with id ${pageCreator.currentPage.id} not found`);
+    }
+
+    // 페이지 메타데이터 업데이트
+    if (pageCreator.pageTitle) {
+      pageCreator.currentPage.title = pageCreator.pageTitle;
+      currentPage.title = pageCreator.pageTitle;
+    }
+    if (pageCreator.currentPage.icon) {
+      currentPage.icon = pageCreator.currentPage.icon;
+    }
+
+    this.workspaceService.updateWorkspace(currentWorkspace);
+
+    this.emitOperation(workspaceId, socketId, pageUpdateOperation);
   }
 
   private determineAnimation(type: ElementType): "rainbow" | "highlight" | "none" {
@@ -523,13 +645,13 @@ export class AiService {
     }
   }
 
-  private async emitOperation(workspaceId: string, operation: Operation) {
-    if (operation.type !== "pageCreate") {
+  private async emitOperation(workspaceId: string, socketId: string, operation: Operation) {
+    if (operation.type !== "pageCreate" && operation.type !== "pageUpdate") {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     }
     this.workspaceService
       .getServer()
-      .to(workspaceId)
+      .to(socketId)
       .emit(this.getEventName(operation.type), operation);
   }
 
@@ -537,6 +659,8 @@ export class AiService {
     switch (operationType) {
       case "pageCreate":
         return "create/page";
+      case "pageUpdate":
+        return "update/page";
       case "blockInsert":
         return "insert/block";
       case "blockUpdate":
@@ -555,7 +679,6 @@ export class AiService {
   parseBlockType(line: string): { type: ElementType; length: number; indent: number } {
     const indent = Math.floor(line.match(/^[\s]*/)[0].length / 2) || 0;
     const trimmed = line.trim();
-    console.log(line, " : ", indent);
     if (trimmed === "---") return { type: "hr", length: 0, indent };
     if (trimmed.startsWith("###")) return { type: "h3", length: 4, indent };
     if (trimmed.startsWith("##")) return { type: "h2", length: 3, indent };

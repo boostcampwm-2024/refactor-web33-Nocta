@@ -459,7 +459,7 @@ export const Editor = memo(
     if (prev.isResizing) return true;
 
     // 일반적인 상황에서는 serializedEditorData가 변경될 때만 리렌더링
-    return prev.serializedEditorData === next.serializedEditorData;
+    return false;
   },
 );
 
