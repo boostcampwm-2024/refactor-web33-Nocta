@@ -9,11 +9,13 @@ import { useRef, useState, useCallback, useEffect, useMemo, memo } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore.ts";
 import { setCaretPosition, getAbsoluteCaretPosition } from "@src/utils/caretUtils.ts";
 import { editorContainer, editorTitle, addNewBlockButton } from "./Editor.style";
+import { SelectionBox } from "./components/SelectionBox/SelectionBox.tsx";
 import { Block } from "./components/block/Block";
 import { useBlockDragAndDrop } from "./hooks/useBlockDragAndDrop";
-import { useBlockOperation } from "./hooks/useBlockOperation.ts";
+import { useBlockOperation } from "./hooks/useBlockOperation2.ts";
 import { useBlockOptionSelect } from "./hooks/useBlockOption";
-import { useCopyAndPaste } from "./hooks/useCopyAndPaste.ts";
+import { useBlockSelect } from "./hooks/useBlockSelect.tsx";
+import { useCopyAndPaste } from "./hooks/useCopyAndPaste2.ts";
 import { useEditorOperation } from "./hooks/useEditorOperation.ts";
 import { useMarkdownGrammer } from "./hooks/useMarkdownGrammer";
 import { useTextOptionSelect } from "./hooks/useTextOptions.ts";
@@ -41,7 +43,6 @@ export const Editor = memo(
       sendBlockInsertOperation,
       sendBlockDeleteOperation,
       sendBlockUpdateOperation,
-      sendBlockCheckboxOperation,
     } = useSocketStore();
     const { clientId } = useSocketStore();
     const [displayTitle, setDisplayTitle] = useState(pageTitle);
@@ -122,15 +123,24 @@ export const Editor = memo(
       sendCharInsertOperation,
     });
 
-    const { handleBlockClick, handleBlockInput, handleKeyDown, handleCheckboxToggle } =
+    // const { handleBlockClick, handleBlockInput, handleKeyDown, handleCheckboxToggle } =
+    //   useBlockOperation({
+    //     editorCRDT: editorCRDT.current,
+    //     setEditorState,
+    //     pageId,
+    //     onKeyDown,
+    //     handleHrInput,
+    //     isLocalChange,
+    //     sendBlockCheckboxOperation,
+    //   });
+
+    const { handleEditorKeyDown, handleEditorInput, handleEditorClick, handleCheckboxToggle } =
       useBlockOperation({
         editorCRDT: editorCRDT.current,
         setEditorState,
         pageId,
-        onKeyDown,
+        handleKeyDown: onKeyDown,
         handleHrInput,
-        isLocalChange,
-        sendBlockCheckboxOperation,
       });
 
     const { onTextStyleUpdate, onTextColorUpdate, onTextBackgroundColorUpdate } =
@@ -141,11 +151,25 @@ export const Editor = memo(
         isLocalChange,
       });
 
+    // const { handleCopy, handlePaste } = useCopyAndPaste({
+    //   editorCRDT: editorCRDT.current,
+    //   setEditorState,
+    //   pageId,
+    //   isLocalChange,
+    // });
+
+    const {
+      selectionBox,
+      selectedBlocks,
+      handleEditorMouseDown,
+      handleEditorMouseMove,
+      handleEditorMouseUp,
+      handleTextSelect,
+    } = useBlockSelect();
+
     const { handleCopy, handlePaste } = useCopyAndPaste({
-      editorCRDT: editorCRDT.current,
-      setEditorState,
-      pageId,
-      isLocalChange,
+      editorState,
+      selectedBlocks,
     });
 
     const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -374,8 +398,20 @@ export const Editor = memo(
     if (!editorCRDT || !editorState) {
       return <div>Loading editor data...</div>;
     }
+
     return (
-      <div data-testid={`editor-${testKey}`} className={editorContainer} ref={editorRef}>
+      <div
+        data-testid={`editor-${testKey}`}
+        className={editorContainer}
+        ref={editorRef}
+        onMouseDown={handleEditorMouseDown}
+        onMouseMove={handleEditorMouseMove}
+        onMouseUp={handleEditorMouseUp}
+        onSelect={handleTextSelect}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+      >
+        {selectionBox.isSelecting && <SelectionBox selectionBox={selectionBox} />}
         <input
           data-testid={`editorTitle-${testKey}`}
           type="text"
@@ -391,6 +427,11 @@ export const Editor = memo(
             height: virtualizer.getTotalSize(),
             position: "relative",
           }}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={handleEditorInput}
+          onKeyDown={handleEditorKeyDown}
+          onClick={handleEditorClick}
         >
           <DndContext
             onDragEnd={(event: DragEndEvent) => {
@@ -411,6 +452,7 @@ export const Editor = memo(
                 const block = editorState.linkedList.spread()[virtualRow.index];
                 return (
                   <Block
+                    isSelected={selectedBlocks.has(`${block.id.client}-${block.id.clock}`)}
                     testKey={`block-${virtualRow.index}`}
                     virtualStart={virtualRow.start}
                     virtualIndex={virtualRow.index}
@@ -419,14 +461,14 @@ export const Editor = memo(
                     id={`${block.id.client}-${block.id.clock}`}
                     block={block}
                     isActive={block.id === editorCRDT.current.currentBlock?.id}
-                    onInput={handleBlockInput}
+                    onInput={() => {}}
                     onCompositionStart={handleCompositionStart}
                     onCompositionUpdate={handleCompositionUpdate}
                     onCompositionEnd={handleCompositionEnd}
-                    onKeyDown={handleKeyDown}
-                    onCopy={handleCopy}
-                    onPaste={handlePaste}
-                    onClick={handleBlockClick}
+                    onKeyDown={() => {}}
+                    onCopy={() => {}}
+                    onPaste={() => {}}
+                    onClick={() => {}}
                     onAnimationSelect={handleAnimationSelect}
                     onTypeSelect={handleTypeSelect}
                     onCopySelect={handleCopySelect}

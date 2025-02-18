@@ -27,6 +27,7 @@ import {
 } from "./Block.style";
 
 interface BlockProps {
+  isSelected: boolean;
   virtualIndex: number;
   virtualStart: number;
   virtualRef: (node: Element | null | undefined) => void;
@@ -74,6 +75,7 @@ interface BlockProps {
 }
 export const Block: React.FC<BlockProps> = memo(
   ({
+    isSelected,
     virtualIndex,
     virtualRef,
     virtualStart,
@@ -312,77 +314,84 @@ export const Block: React.FC<BlockProps> = memo(
           top: 0,
           left: 0,
           width: "100%",
-          transform: `translateY(${virtualStart}px)`,
+          transform: `translateY(${virtualStart}px) `,
         }}
       >
         {showTopIndicator && <Indicator />}
-        <motion.div
-          ref={setNodeRef}
-          className={blockContainerStyle({ isActive })}
-          style={{ opacity: isDragging || isChildOfDragging ? 0.3 : undefined }}
-          initial={blockAnimation[block.animation || "none"].initial}
-          animate={isAnimationStart && blockAnimation[block.animation || "none"].animate}
-          data-group
+        <div
+          style={{
+            backgroundColor: isSelected ? "rgba(173, 173, 255, 0.3)" : "transparent",
+          }}
         >
           <motion.div
-            className={contentWrapperStyle()}
-            style={{ paddingLeft: `${block.indent * 12}px` }}
+            ref={setNodeRef}
+            className={blockContainerStyle({ isActive })}
+            style={{ opacity: isDragging || isChildOfDragging ? 0.3 : undefined }}
+            initial={blockAnimation[block.animation || "none"].initial}
+            animate={isAnimationStart && blockAnimation[block.animation || "none"].animate}
+            data-group
           >
-            <MenuBlock
-              attributes={attributes}
-              listeners={listeners}
-              onAnimationSelect={handleAnimationSelect}
-              onTypeSelect={handleTypeSelect}
-              onCopySelect={handleCopySelect}
-              onDeleteSelect={handleDeleteSelect}
-            />
+            <motion.div
+              className={contentWrapperStyle()}
+              style={{ paddingLeft: `${block.indent * 12}px` }}
+            >
+              <MenuBlock
+                attributes={attributes}
+                listeners={listeners}
+                onAnimationSelect={handleAnimationSelect}
+                onTypeSelect={handleTypeSelect}
+                onCopySelect={handleCopySelect}
+                onDeleteSelect={handleDeleteSelect}
+              />
 
-            <IconBlock
-              testKey="iconBlock"
-              type={block.type}
-              index={block.listIndex}
-              indent={block.indent}
-              isChecked={block.isChecked}
-              onCheckboxClick={handleCheckboxClick}
+              <IconBlock
+                testKey="iconBlock"
+                type={block.type}
+                index={block.listIndex}
+                indent={block.indent}
+                isChecked={block.isChecked}
+                onCheckboxClick={handleCheckboxClick}
+              />
+              <div
+                data-testid="contentEditable"
+                ref={blockRef}
+                // NOTE 필요없음
+                // onKeyDown={(e) => handleKeyDown(e, blockRef.current, block)}
+                // onInput={handleInput}
+                // onClick={(e) => onClick(block.id, e)}
+                // onCopy={(e) => onCopy(e, blockRef.current, block)}
+                // onPaste={(e) => onPaste(e, blockRef.current, block)}
+                // onMouseUp={handleMouseUp}
+                // onCompositionStart={(e) => onCompositionStart(e, block)}
+                // onCompositionUpdate={(e) => onCompositionUpdate(e, block)}
+                // onCompositionEnd={(e) => onCompositionEnd(e, block)}
+                // contentEditable={block.type !== "hr"}
+                spellCheck={false}
+                suppressContentEditableWarning
+                className={textContainerStyle({
+                  type: block.type,
+                })}
+              />
+            </motion.div>
+            <TextOptionModal
+              selectedNodes={selectedNodes}
+              isOpen={isOpen}
+              onClose={closeModal}
+              onBoldSelect={() => handleStyleSelect("bold")}
+              onItalicSelect={() => handleStyleSelect("italic")}
+              onUnderlineSelect={() => handleStyleSelect("underline")}
+              onStrikeSelect={() => handleStyleSelect("strikethrough")}
+              onTextColorSelect={handleTextColorSelect}
+              onTextBackgroundColorSelect={handleTextBackgroundColorSelect}
             />
-            <div
-              data-testid="contentEditable"
-              ref={blockRef}
-              onKeyDown={(e) => handleKeyDown(e, blockRef.current, block)}
-              onInput={handleInput}
-              onClick={(e) => onClick(block.id, e)}
-              onCopy={(e) => onCopy(e, blockRef.current, block)}
-              onPaste={(e) => onPaste(e, blockRef.current, block)}
-              onMouseUp={handleMouseUp}
-              onCompositionStart={(e) => onCompositionStart(e, block)}
-              onCompositionUpdate={(e) => onCompositionUpdate(e, block)}
-              onCompositionEnd={(e) => onCompositionEnd(e, block)}
-              contentEditable={block.type !== "hr"}
-              spellCheck={false}
-              suppressContentEditableWarning
-              className={textContainerStyle({
-                type: block.type,
-              })}
+            <TypeOptionModal
+              isOpen={slashModalOpen}
+              onClose={() => setSlashModalOpen(false)}
+              onTypeSelect={(type) => handleTypeSelect(type)}
+              position={slashModalPosition}
             />
           </motion.div>
-          <TextOptionModal
-            selectedNodes={selectedNodes}
-            isOpen={isOpen}
-            onClose={closeModal}
-            onBoldSelect={() => handleStyleSelect("bold")}
-            onItalicSelect={() => handleStyleSelect("italic")}
-            onUnderlineSelect={() => handleStyleSelect("underline")}
-            onStrikeSelect={() => handleStyleSelect("strikethrough")}
-            onTextColorSelect={handleTextColorSelect}
-            onTextBackgroundColorSelect={handleTextBackgroundColorSelect}
-          />
-          <TypeOptionModal
-            isOpen={slashModalOpen}
-            onClose={() => setSlashModalOpen(false)}
-            onTypeSelect={(type) => handleTypeSelect(type)}
-            position={slashModalPosition}
-          />
-        </motion.div>
+        </div>
         {showBottomIndicator && <Indicator />}
       </div>
     );
