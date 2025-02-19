@@ -2,11 +2,9 @@ import { PageIconType, serializedEditorDataProps } from "@noctaCrdt/types/Interf
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Editor } from "@features/editor/Editor";
-import { Page as PageType, DIRECTIONS, Direction } from "@src/types/page";
+import { Page as PageType, DIRECTIONS } from "@src/types/page";
 import { pageContainer, pageHeader, resizeHandles } from "./Page.style";
 import { PageControlButton } from "./components/PageControlButton/PageControlButton";
-import { PageSkeletonUI } from "./components/PageSkeletonUI/PageSkeletonUI";
-import { useSkeletonPage } from "./components/PageSkeletonUI/useSkeletonPage";
 import { PageTitle } from "./components/PageTitle/PageTitle";
 import { usePage } from "./hooks/usePage";
 
@@ -36,24 +34,8 @@ export const Page = ({
   handleTitleChange,
   serializedEditorData,
 }: PageProps) => {
-  const {
-    position,
-    size,
-    isMaximized,
-    pageDrag,
-    pageMinimize,
-    pageMaximize,
-    isSidebarOpen,
-    handleResizeComplete,
-  } = usePage({ x, y });
-
-  const { isResizing, skeletonPosition, skeletonSize, handleSkeletonResizeStart } = useSkeletonPage(
-    {
-      initialPosition: position,
-      initialSize: size,
-      isSidebarOpen,
-      onApply: handleResizeComplete,
-    },
+  const { position, size, isMaximized, pageResize, pageDrag, pageMinimize, pageMaximize } = usePage(
+    { x, y },
   );
 
   const [serializedEditorDatas, setSerializedEditorDatas] =
@@ -73,11 +55,6 @@ export const Page = ({
     }
   };
 
-  const handleResizeStart = (e: React.MouseEvent, direction: Direction) => {
-    e.preventDefault();
-    // 스켈레톤 UI의 리사이징을 시작
-    handleSkeletonResizeStart(e, direction);
-  };
   // serializedEditorData prop이 변경되면 local state도 업데이트
   useEffect(() => {
     setSerializedEditorDatas(serializedEditorData);
@@ -96,16 +73,18 @@ export const Page = ({
           style={{
             width: `${size.width}px`,
             height: `${size.height}px`,
-            transform: isResizing
-              ? "scale(0)"
-              : `scale(1) translate(${position.x}px, ${position.y}px)`,
+            transform: `translate(${position.x}px, ${position.y}px)`,
             zIndex,
-            visibility: isResizing ? "hidden" : "visible",
           }}
           onPointerDown={handlePageClick}
         >
           <div className={pageHeader} onPointerDown={pageDrag} onClick={handlePageClick}>
-            <PageTitle testKey={testKey.split("-")[1]} title={title} icon={icon} />
+            <PageTitle
+              testKey={testKey.split("-")[1]}
+              title={title}
+              icon={icon}
+              onTitleChange={onTitleChange}
+            />
             <PageControlButton
               testKey={testKey.split("-")[1]}
               isMaximized={isMaximized}
@@ -115,7 +94,6 @@ export const Page = ({
             />
           </div>
           <Editor
-            isResizing={isResizing}
             testKey={`${testKey.split("-")[1]}`}
             onTitleChange={onTitleChange}
             pageId={id}
@@ -126,26 +104,11 @@ export const Page = ({
             <motion.div
               key={direction}
               className={resizeHandles[direction]}
-              onMouseDown={(e) => handleResizeStart(e, direction)}
+              onMouseDown={(e) => pageResize(e, direction)}
             />
           ))}
         </div>
       </motion.div>
-      {isResizing && (
-        <motion.div key={`skeleton-${id}`}>
-          <PageSkeletonUI
-            id={`${id}-skeleton`}
-            title={title}
-            icon={icon}
-            testKey={`${testKey}-skeleton`}
-            position={skeletonPosition}
-            size={skeletonSize}
-            zIndex={zIndex}
-            onDragStart={pageDrag}
-            onResizeStart={handleSkeletonResizeStart}
-          />
-        </motion.div>
-      )}
     </AnimatePresence>
   );
 };

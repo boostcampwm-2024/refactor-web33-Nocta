@@ -25,7 +25,6 @@ export interface EditorStateProps {
 
 interface EditorProps {
   testKey: string;
-  isResizing: boolean;
   onTitleChange: (title: string, syncWithServer: boolean) => void;
   pageId: string;
   serializedEditorData: serializedEditorDataProps;
@@ -148,21 +147,6 @@ export const Editor = memo(
       isLocalChange,
     });
 
-    const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      setDisplayTitle(newTitle); // 로컬 상태 업데이트
-      onTitleChange(newTitle, false); // 낙관적 업데이트
-    };
-
-    const handleBlur = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newTitle = e.target.value;
-      if (newTitle === "") {
-        setDisplayTitle(""); // 입력이 비어있으면 로컬상태는 빈 문자열로
-      } else {
-        onTitleChange(newTitle, true);
-      }
-    };
-
     const handleCompositionStart = (
       e: React.CompositionEvent<HTMLDivElement>,
       block: CRDTBlock,
@@ -284,7 +268,7 @@ export const Editor = memo(
       count: editorState.linkedList.spread().length,
       getScrollElement: () => editorRef.current,
       estimateSize: () => 24,
-      overscan: 5,
+      overscan: 3,
     });
 
     useEffect(() => {
@@ -376,16 +360,6 @@ export const Editor = memo(
     }
     return (
       <div data-testid={`editor-${testKey}`} className={editorContainer} ref={editorRef}>
-        <input
-          data-testid={`editorTitle-${testKey}`}
-          type="text"
-          placeholder="제목을 입력하세요..."
-          onChange={handleTitleChange}
-          onBlur={handleBlur}
-          value={displayTitle}
-          className={editorTitle}
-        />
-        <div style={{ height: "36px" }}></div>
         <div
           style={{
             height: virtualizer.getTotalSize(),
@@ -453,13 +427,6 @@ export const Editor = memo(
         </div>
       </div>
     );
-  },
-  (prev, next) => {
-    // 리사이징 중에는 항상 리렌더링을 방지
-    if (prev.isResizing) return true;
-
-    // 일반적인 상황에서는 serializedEditorData가 변경될 때만 리렌더링
-    return false;
   },
 );
 
