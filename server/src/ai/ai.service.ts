@@ -178,11 +178,11 @@ export class AiService {
 
         const pageUpdateOperation: RemotePageUpdateOperation = {
           type: "pageUpdate",
-          workspaceId: workspaceId,
+          workspaceId,
           pageId: pageCreator.currentPage.id,
           title: pageCreator.pageTitle,
           icon: pageCreator.currentPage.icon,
-          clientId: clientId,
+          clientId,
         };
 
         this.workspaceService
@@ -605,11 +605,11 @@ export class AiService {
 
     const pageUpdateOperation: RemotePageUpdateOperation = {
       type: "pageUpdate",
-      workspaceId: workspaceId,
+      workspaceId,
       pageId: pageCreator.currentPage.id,
       title: pageCreator.pageTitle,
       icon: "AI",
-      clientId: clientId,
+      clientId,
     };
 
     const currentWorkspace = await this.workspaceService.getWorkspace(workspaceId);
