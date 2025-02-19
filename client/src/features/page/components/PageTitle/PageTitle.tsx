@@ -57,7 +57,7 @@ export const PageTitle = ({ testKey, title, icon, onTitleChange }: PageTitleProp
   }, [isTitleChange]);
 
   return (
-    <div className={pageTitleContainer} onClick={handleBlur}>
+    <div className={pageTitleContainer}>
       <IconComponent color={color} size="24px" style={{ flexShrink: 0 }} />
       {isTitleChange ? (
         <input
