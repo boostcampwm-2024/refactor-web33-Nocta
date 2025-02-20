@@ -23,10 +23,9 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-          CLOVASTUDIO_PROMPT: ${{ secrets.CLOVASTUDIO_PROMPT }}
-          CLOVASTUDIO_API_URL: ${{ secrets.CLOVASTUDIO_API_URL }}
-          CLOVASTUDIO_API_KEY: ${{ secrets.CLOVASTUDIO_API_KEY }}
-          CLOVASTUDIO_REQUEST_ID: ${{ secrets.CLOVASTUDIO_REQUEST_ID }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: |
           docker-compose up -d --build
 

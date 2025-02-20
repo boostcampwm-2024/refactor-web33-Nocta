@@ -9,6 +9,7 @@ import {
   CRDTOperation,
   RemoteBlockUpdateOperation,
   RemoteCharUpdateOperation,
+  RemotePageUpdateOperation,
 } from "@noctaCrdt/types/Interfaces";
 import { Block, Char } from "@noctaCrdt/Node";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
@@ -17,14 +18,7 @@ import { nanoid } from "nanoid";
 import { BlockId, CharId } from "@noctaCrdt/NodeId";
 import { HttpService } from "@nestjs/axios";
 import { WorkSpaceService } from "../workspace/workspace.service";
-import { firstValueFrom, lastValueFrom, map } from "rxjs";
 import * as readline from "readline";
-
-interface SSEEvent {
-  id?: string;
-  event?: string;
-  data?: any;
-}
 
 interface PageCreator {
   currentPage: Page | null;
@@ -34,6 +28,7 @@ interface PageCreator {
   blockClock: number;
   charClock: number;
   currentLine: string;
+  pageTitle: string;
 
   specifiedBlockType: boolean;
   /*
@@ -54,35 +49,40 @@ interface PageCreator {
 
 @Injectable()
 export class AiService {
+  private tokenQueue: string[] = [];
+  private processingQueue = false;
+
   constructor(
     private axiosHttpService: HttpService,
     private readonly workspaceService: WorkSpaceService,
   ) {}
 
-  async requestAI(message: string, workspaceId: string, clientId: number): Promise<void> {
+  async requestAI(
+    message: string,
+    workspaceId: string,
+    clientId: number,
+    socketId: string,
+  ): Promise<void> {
     const payload = {
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: process.env.CLOVASTUDIO_PROMPT,
+          content: process.env.AI_PROMPT,
         },
         {
           role: "user",
           content: message,
         },
       ],
-      topP: 0.8,
-      topK: 0,
-      maxTokens: 1024,
+
+      max_tokens: 1024,
       temperature: 0.5,
-      repeatPenalty: 5.0,
-      stopBefore: [],
-      includeAiFilters: true,
-      seed: 0,
+      top_p: 0.8,
+      stream: true, // 스트리밍 응답 요청
     };
 
     try {
-      let eventBuffer: SSEEvent = {};
       const pageCreator: PageCreator = {
         currentPage: null,
         currentBlock: null,
@@ -96,29 +96,29 @@ export class AiService {
         underline: null,
         strikethrough: null,
         specifiedBlockType: false,
+        pageTitle: "",
       };
 
       // 페이지 초기화
-      pageCreator.currentPage = await this.createNewPage(clientId, "AI 응답", workspaceId);
+      pageCreator.currentPage = await this.createNewPage(
+        clientId,
+        "생성중...",
+        workspaceId,
+        socketId,
+      );
 
       // Axios가 응답을 스트림으로 반환하도록 설정합니다.
-      const response = await this.axiosHttpService.axiosRef.post(
-        process.env.CLOVASTUDIO_API_URL,
-        payload,
-        {
-          headers: {
-            "X-NCP-CLOVASTUDIO-REQUEST-ID": process.env.CLOVASTUDIO_REQUEST_ID,
-            Authorization: `Bearer ${process.env.CLOVASTUDIO_API_KEY}`,
-            "Content-Type": "application/json",
-            Accept: "text/event-stream",
-          },
-          responseType: "stream",
+      const response = await this.axiosHttpService.axiosRef.post(process.env.AI_API_URL, payload, {
+        headers: {
+          Authorization: `Bearer ${process.env.AI_API_KEY}`,
+          "Content-Type": "application/json",
         },
-      );
+        responseType: "stream",
+      });
 
       // response.data가 스트림인지 확인
       if (typeof response.data.on !== "function") {
-        // console.error("response.data가 스트림이 아닙니다:", response.data);
+        console.error("response.data가 스트림이 아닙니다:", response.data);
         return;
       }
 
@@ -129,43 +129,66 @@ export class AiService {
       });
 
       rl.on("line", (line: string) => {
-        // console.log(line);
-        // 공백 라인이 나오면 이벤트 구분자로 판단하고, 지금까지 버퍼에 담긴 이벤트를 처리합니다.
-        if (!line.trim()) {
-          if (Object.keys(eventBuffer).length > 0) {
-            this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-            eventBuffer = {};
-          }
-          return;
-        }
+        const trimmedLine = line.trim();
+        if (!trimmedLine) return;
 
-        // 새로운 이벤트 시작: 이전 이벤트가 있으면 먼저 처리
-        if (line.startsWith("id:")) {
-          // 만약 이미 버퍼에 이벤트 내용이 있다면 flush 합니다.
-          if (eventBuffer.id || eventBuffer.event || eventBuffer.data) {
-            this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-            eventBuffer = {};
+        // OpenAI 스트림은 "data:" 접두사가 붙습니다.
+        if (trimmedLine.startsWith("data:")) {
+          const dataText = trimmedLine.slice(5).trim();
+
+          // 스트림 종료 시 "[DONE]" 메시지가 옵니다.
+          if (dataText === "[DONE]") {
+            rl.close();
+            return;
           }
-          eventBuffer.id = line.slice(3).trim();
-        } else if (line.startsWith("event:")) {
-          eventBuffer.event = line.slice(6).trim();
-        } else if (line.startsWith("data:")) {
-          const dataText = line.slice(5).trim();
+
           try {
-            eventBuffer.data = JSON.parse(dataText);
+            const parsedData = JSON.parse(dataText);
+            // OpenAI의 응답은 choices 배열 내에 delta가 존재합니다.
+            // 예: { choices: [ { delta: { content: "..." } } ] }
+            this.handleSSEEvent(parsedData, workspaceId, clientId, pageCreator, socketId);
           } catch (error) {
-            // JSON 파싱이 실패하면 그냥 문자열로 저장합니다.
-            eventBuffer.data = dataText;
+            console.error("JSON 파싱 에러:", error);
           }
         }
       });
 
-      rl.on("close", () => {
-        // 스트림 종료 시, 버퍼에 남은 이벤트가 있으면 처리합니다.
-        if (Object.keys(eventBuffer).length > 0) {
-          this.handleSSEEvent(eventBuffer, workspaceId, clientId, pageCreator);
-        }
-        this.processToken("\n", workspaceId, clientId, pageCreator);
+      rl.on("close", async () => {
+        await this.processToken("\n", workspaceId, clientId, pageCreator, socketId);
+        if (pageCreator.pageTitle)
+          await this.updateCurrentPage(workspaceId, clientId, pageCreator, socketId);
+
+        const currentPage = await this.workspaceService.updatePage(
+          workspaceId,
+          pageCreator.currentPage.id,
+        );
+        const pageCreateOperation = {
+          type: "pageCreate",
+          workspaceId,
+          clientId,
+          page: currentPage.serialize(),
+        } as RemotePageCreateOperation;
+
+        this.workspaceService
+          .getServer()
+          .to(workspaceId)
+          .except(socketId)
+          .emit("create/page", pageCreateOperation);
+
+        const pageUpdateOperation: RemotePageUpdateOperation = {
+          type: "pageUpdate",
+          workspaceId,
+          pageId: pageCreator.currentPage.id,
+          title: pageCreator.pageTitle,
+          icon: pageCreator.currentPage.icon,
+          clientId,
+        };
+
+        this.workspaceService
+          .getServer()
+          .to(workspaceId)
+          .except(socketId)
+          .emit("update/page", pageUpdateOperation);
         console.log("SSE 스트림이 종료되었습니다.");
       });
 
@@ -179,16 +202,46 @@ export class AiService {
   }
 
   async handleSSEEvent(
-    event: SSEEvent,
+    event: any,
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<void> {
-    // if (event.event === "result") console.log("= 토큰 => ", event.data.message);
-    if (event.event !== "token") return;
-    const token = event.data.message?.content || "";
-    // console.log("받은 토큰:", token);
-    await this.processToken(token, workspaceId, clientId, pageCreator);
+    // OpenAI의 응답은 choices 배열 내에 delta 객체에 token 내용이 있습니다.
+    if (!event.choices || !Array.isArray(event.choices)) return;
+
+    const [choice, _] = event.choices;
+    if (!choice) return;
+
+    const token = choice.delta?.content || "";
+    if (token) {
+      await this.enqueueToken(token, workspaceId, clientId, pageCreator, socketId);
+    }
+  }
+
+  async enqueueToken(
+    token: string,
+    workspaceId: string,
+    clientId: number,
+    pageCreator: PageCreator,
+    socketId: string,
+  ): Promise<void> {
+    // 토큰을 큐에 추가
+    this.tokenQueue.push(token);
+
+    // 만약 현재 큐 처리가 진행 중이지 않다면 시작합니다.
+    if (!this.processingQueue) {
+      this.processingQueue = true;
+      while (this.tokenQueue.length > 0) {
+        // 큐에서 토큰을 하나씩 꺼내어 처리합니다.
+        const tokenToProcess = this.tokenQueue.shift();
+        if (tokenToProcess) {
+          await this.processToken(tokenToProcess, workspaceId, clientId, pageCreator, socketId);
+        }
+      }
+      this.processingQueue = false;
+    }
   }
 
   private async processToken(
@@ -196,6 +249,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ) {
     for (let i = 0; i < token.length; i++) {
       /*
@@ -207,19 +261,21 @@ export class AiService {
       `    ### abcd asdfasdf`
       */
       const char = token[i];
-      // console.log("char : " + char);
 
       if (!pageCreator.currentBlock) {
-        pageCreator.currentBlock = await this.createNewBlock(workspaceId, clientId, pageCreator);
+        pageCreator.currentBlock = await this.createNewBlock(
+          workspaceId,
+          clientId,
+          pageCreator,
+          socketId,
+        );
         pageCreator.specifiedBlockType = false;
       }
 
       if (char === "\n") {
-        // 임시 저장된 토큰 반영
-        const line = pageCreator.currentLine;
-        pageCreator.currentLine = "";
-        pageCreator.specifiedBlockType = true;
-        await this.processToken(line, workspaceId, clientId, pageCreator);
+        if (!pageCreator.specifiedBlockType) {
+          await this.checkBlockType(pageCreator, workspaceId, clientId, socketId);
+        }
 
         // 새 블록 준비
         pageCreator.lastChar = null;
@@ -235,19 +291,12 @@ export class AiService {
 
       if (!pageCreator.specifiedBlockType) {
         pageCreator.currentLine += char;
-        if (char === " " && pageCreator.currentLine.at(-2) !== " ") {
-          await this.updateCurrentBlock(workspaceId, pageCreator);
-          pageCreator.specifiedBlockType = true;
-          if (pageCreator.currentBlock.type === "p") {
-            // currentLine에서 indent만큼 공백 지우고
-            // 남은 것들에 대해서
-            // 스타일 문법이면 변환해서 스타일 적용
-            // 아니면 insertChar
-            const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
-            pageCreator.currentLine = "";
-            await this.processToken(line, workspaceId, clientId, pageCreator);
-          }
-          pageCreator.currentLine = "";
+        if (
+          char === " " &&
+          pageCreator.currentLine.length >= 2 &&
+          pageCreator.currentLine.at(-2) !== " "
+        ) {
+          await this.checkBlockType(pageCreator, workspaceId, clientId, socketId);
         }
         continue;
       }
@@ -270,25 +319,25 @@ export class AiService {
             pageCreator.italic = null;
           } else {
             pageCreator.italic = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
             continue;
           }
           if (pageCreator.bold) {
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.bold)) {
-              this.updateCurrentChar("bold", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("bold", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.bold = null;
           } else {
             pageCreator.bold = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -296,15 +345,15 @@ export class AiService {
           if (pageCreator.italic) {
             let curNode = pageCreator.lastChar;
             while (!curNode.id.equals(pageCreator.italic)) {
-              this.updateCurrentChar("italic", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("italic", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
 
             pageCreator.italic = null;
           } else {
             pageCreator.italic = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -320,19 +369,25 @@ export class AiService {
             // strikethrough 만나면 이거 지우고
             // strikethrough 이전 노드까지 지우고
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.strikethrough)) {
-              this.updateCurrentChar("strikethrough", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar(
+                "strikethrough",
+                curNode.id,
+                workspaceId,
+                pageCreator,
+                socketId,
+              );
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.strikethrough = null;
           } else {
             pageCreator.strikethrough = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
@@ -343,32 +398,58 @@ export class AiService {
           // 밑줄 문법
           if (pageCreator.underline) {
             let curNode = pageCreator.lastChar;
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
             curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             while (!curNode.id.equals(pageCreator.underline)) {
-              this.updateCurrentChar("underline", curNode.id, workspaceId, pageCreator);
+              this.updateCurrentChar("underline", curNode.id, workspaceId, pageCreator, socketId);
               curNode = pageCreator.currentBlock.crdt.LinkedList.getNode(curNode.prev);
             }
-            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator);
-            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator);
+            this.deleteCurrentChar(curNode.id, workspaceId, pageCreator, socketId);
+            this.deleteCurrentChar(curNode.prev, workspaceId, pageCreator, socketId);
 
             pageCreator.underline = null;
           } else {
             pageCreator.underline = (
-              await this.createNewChar(char, workspaceId, clientId, pageCreator)
+              await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId)
             ).id;
           }
           continue;
         }
       }
 
-      await this.createNewChar(char, workspaceId, clientId, pageCreator);
+      await this.createNewChar(char, workspaceId, clientId, pageCreator, socketId);
     }
   }
 
-  private async createNewPage(clientId: number, title: string, workspaceId: string): Promise<Page> {
+  private async checkBlockType(
+    pageCreator: PageCreator,
+    workspaceId: string,
+    clientId: number,
+    socketId: string,
+  ) {
+    await this.updateCurrentBlock(workspaceId, pageCreator, socketId);
+    pageCreator.specifiedBlockType = true;
+    if (pageCreator.currentBlock.type === "p") {
+      // currentLine에서 indent만큼 공백 지우고
+      // 남은 것들에 대해서
+      // 스타일 문법이면 변환해서 스타일 적용
+      // 아니면 insertChar
+      const line = pageCreator.currentLine.slice(pageCreator.currentBlock.indent * 2);
+      pageCreator.currentLine = "";
+      await this.processToken(line, workspaceId, clientId, pageCreator, socketId);
+    }
+    pageCreator.currentLine = "";
+  }
+
+  private async createNewPage(
+    clientId: number,
+    title: string,
+    workspaceId: string,
+    socketId: string,
+  ): Promise<Page> {
     const newEditorCRDT = new EditorCRDT(clientId);
     const page = new Page(nanoid(), title, "Docs", newEditorCRDT);
+    page.icon = "AI";
 
     const pageOperation = {
       type: "pageCreate",
@@ -379,8 +460,8 @@ export class AiService {
 
     const workspace = await this.workspaceService.getWorkspace(workspaceId);
     workspace.pageList.push(pageOperation.page);
-    this.workspaceService.updateWorkspace(workspace);
-    await this.emitOperation(workspaceId, pageOperation);
+    await this.workspaceService.updateWorkspace(workspace);
+    this.emitOperation(workspaceId, socketId, pageOperation);
     return page;
   }
 
@@ -388,6 +469,7 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<Block> {
     const newBlock = new Block("", new BlockId(pageCreator.blockClock, clientId));
     pageCreator.blockClock += 1;
@@ -408,7 +490,7 @@ export class AiService {
       pageId: pageCreator.currentPage.id,
     };
 
-    await this.emitOperation(workspaceId, blockInsertOperation);
+    this.emitOperation(workspaceId, socketId, blockInsertOperation);
     return newBlock;
   }
 
@@ -417,7 +499,10 @@ export class AiService {
     workspaceId: string,
     clientId: number,
     pageCreator: PageCreator,
+    socketId: string,
   ): Promise<Char> {
+    if (pageCreator.currentBlock.type === "h1") pageCreator.pageTitle += char;
+
     const charNode = new Char(char, new CharId(pageCreator.charClock, clientId));
     pageCreator.charClock += 1;
     charNode.next = null;
@@ -442,7 +527,7 @@ export class AiService {
 
     pageCreator.currentBlock.crdt.remoteInsert(charOperation);
 
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
     return charNode;
   }
 
@@ -451,6 +536,7 @@ export class AiService {
     charId: CharId,
     workspaceId: string,
     pageCreator: PageCreator,
+    socketId: string,
   ) {
     const charNode = pageCreator.currentBlock.crdt.LinkedList.getNode(charId);
     charNode.style.push(type);
@@ -462,10 +548,15 @@ export class AiService {
     };
 
     pageCreator.currentBlock.crdt.remoteUpdate(charOperation);
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
   }
 
-  private async deleteCurrentChar(charId: CharId, workspaceId: string, pageCreator: PageCreator) {
+  private async deleteCurrentChar(
+    charId: CharId,
+    workspaceId: string,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
     const charOperation: RemoteCharDeleteOperation = {
       type: "charDelete",
       targetId: charId,
@@ -475,16 +566,18 @@ export class AiService {
     };
 
     pageCreator.currentBlock.crdt.remoteDelete(charOperation);
-    await this.emitOperation(workspaceId, charOperation);
+    this.emitOperation(workspaceId, socketId, charOperation);
   }
 
-  private async updateCurrentBlock(workspaceId: string, pageCreator: PageCreator) {
-    if (!pageCreator.currentBlock || !pageCreator.currentLine.trim()) return;
+  private async updateCurrentBlock(
+    workspaceId: string,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
+    if (!pageCreator.currentBlock) return;
 
     // 블록 타입 판정
-    // console.log("currentLine:", pageCreator.currentLine);
     const { type, indent } = this.parseBlockType(pageCreator.currentLine);
-    // console.log("type:", type);
 
     // 블록 속성 업데이트
     pageCreator.currentBlock.type = type;
@@ -498,7 +591,46 @@ export class AiService {
       pageId: pageCreator.currentPage.id,
     };
 
-    await this.emitOperation(workspaceId, blockUpdateOperation);
+    this.emitOperation(workspaceId, socketId, blockUpdateOperation);
+  }
+
+  private async updateCurrentPage(
+    workspaceId: string,
+    clientId: number,
+    pageCreator: PageCreator,
+    socketId: string,
+  ) {
+    if (!pageCreator.currentPage) return;
+
+    const pageUpdateOperation: RemotePageUpdateOperation = {
+      type: "pageUpdate",
+      workspaceId,
+      pageId: pageCreator.currentPage.id,
+      title: pageCreator.pageTitle,
+      icon: "AI",
+      clientId,
+    };
+
+    const currentWorkspace = await this.workspaceService.getWorkspace(workspaceId);
+    const currentPage = currentWorkspace.pageList.find(
+      (page) => page.id === pageCreator.currentPage.id,
+    );
+    if (!currentPage) {
+      throw new Error(`Page with id ${pageCreator.currentPage.id} not found`);
+    }
+
+    // 페이지 메타데이터 업데이트
+    if (pageCreator.pageTitle) {
+      pageCreator.currentPage.title = pageCreator.pageTitle;
+      currentPage.title = pageCreator.pageTitle;
+    }
+    if (pageCreator.currentPage.icon) {
+      currentPage.icon = pageCreator.currentPage.icon;
+    }
+
+    this.workspaceService.updateWorkspace(currentWorkspace);
+
+    this.emitOperation(workspaceId, socketId, pageUpdateOperation);
   }
 
   private determineAnimation(type: ElementType): "rainbow" | "highlight" | "none" {
@@ -512,14 +644,13 @@ export class AiService {
     }
   }
 
-  private async emitOperation(workspaceId: string, operation: Operation) {
-    if (operation.type !== "pageCreate") {
+  private async emitOperation(workspaceId: string, socketId: string, operation: Operation) {
+    if (operation.type !== "pageCreate" && operation.type !== "pageUpdate") {
       this.workspaceService.storeOperation(workspaceId, operation as CRDTOperation);
     }
-    // console.log(operation.type);
     this.workspaceService
       .getServer()
-      .to(workspaceId)
+      .to(socketId)
       .emit(this.getEventName(operation.type), operation);
   }
 
@@ -527,6 +658,8 @@ export class AiService {
     switch (operationType) {
       case "pageCreate":
         return "create/page";
+      case "pageUpdate":
+        return "update/page";
       case "blockInsert":
         return "insert/block";
       case "blockUpdate":
@@ -543,8 +676,9 @@ export class AiService {
   }
 
   parseBlockType(line: string): { type: ElementType; length: number; indent: number } {
-    const indent = line.match(/^[\s]*/)[0].length / 2 || 0;
+    const indent = Math.floor(line.match(/^[\s]*/)[0].length / 2) || 0;
     const trimmed = line.trim();
+    if (trimmed === "---") return { type: "hr", length: 0, indent };
     if (trimmed.startsWith("###")) return { type: "h3", length: 4, indent };
     if (trimmed.startsWith("##")) return { type: "h2", length: 3, indent };
     if (trimmed.startsWith("#")) return { type: "h1", length: 2, indent };
@@ -553,7 +687,6 @@ export class AiService {
     if (trimmed.startsWith(">")) return { type: "blockquote", length: 2, indent };
     if (trimmed.startsWith("[]")) return { type: "checkbox", length: 3, indent };
     if (trimmed.startsWith("[x]")) return { type: "checkbox", length: 4, indent };
-    if (trimmed === "---") return { type: "hr", length: 0, indent };
     return { type: "p", length: 0, indent };
   }
 }

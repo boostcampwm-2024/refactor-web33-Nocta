@@ -25,7 +25,8 @@ import {
   // 협업 관련
   RiGroupLine, // team: 팀 문서
   RiDiscussLine, // feedback: 피드백
-  RiAddFill, // plus: 추가
+  RiAddFill,
+  RiRobot2Line, // plus: 추가
 } from "react-icons/ri";
 
 export interface IconConfig {
@@ -107,6 +108,11 @@ export const iconComponents: Record<PageIconType | "plus", IconConfig> = {
   plus: {
     icon: RiAddFill,
     color: "#2B4158",
+  },
+
+  AI: {
+    icon: RiRobot2Line,
+    color: "#6a00f4",
   },
 };
 
