@@ -26,7 +26,6 @@ jobs:
           AI_PROMPT: ${{ secrets.AI_PROMPT }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_REQUEST_ID: ${{ secrets.AI_REQUEST_ID }}
         run: |
           docker-compose up -d --build
 

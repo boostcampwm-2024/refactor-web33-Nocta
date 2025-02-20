@@ -77,7 +77,7 @@ export class AiService {
       ],
 
       max_tokens: 1024,
-      temperature: 0.7,
+      temperature: 0.5,
       top_p: 0.8,
       stream: true, // 스트리밍 응답 요청
     };

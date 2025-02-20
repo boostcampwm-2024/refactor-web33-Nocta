@@ -25,7 +25,6 @@ services:
       - AI_PROMPT=${AI_PROMPT}
       - AI_API_URL=${AI_API_URL}
       - AI_API_KEY=${AI_API_KEY}
-      - AI_REQUEST_ID=${AI_REQUEST_ID}
 
   nginx:
     build:
