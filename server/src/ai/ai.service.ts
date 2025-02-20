@@ -18,7 +18,6 @@ import { nanoid } from "nanoid";
 import { BlockId, CharId } from "@noctaCrdt/NodeId";
 import { HttpService } from "@nestjs/axios";
 import { WorkSpaceService } from "../workspace/workspace.service";
-import { firstValueFrom, lastValueFrom, map } from "rxjs";
 import * as readline from "readline";
 
 interface PageCreator {

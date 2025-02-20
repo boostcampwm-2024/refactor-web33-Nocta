@@ -1,27 +1,7 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  UseGuards,
-  Request,
-  Response,
-  UnauthorizedException,
-  ConflictException,
-  BadRequestException,
-  Logger,
-} from "@nestjs/common";
+import { Controller, Post, Body, Response, Logger } from "@nestjs/common";
 import { AiService } from "./ai.service";
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiCookieAuth,
-} from "@nestjs/swagger";
-import { Response as ExpressResponse, Request as ExpressRequest } from "express";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from "@nestjs/swagger";
+import { Response as ExpressResponse } from "express";
 
 @ApiTags("ai")
 // @UseGuards(JwtAuthGuard)
