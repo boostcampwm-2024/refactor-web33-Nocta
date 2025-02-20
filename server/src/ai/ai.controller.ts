@@ -1,27 +1,7 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  UseGuards,
-  Request,
-  Response,
-  UnauthorizedException,
-  ConflictException,
-  BadRequestException,
-  Logger,
-} from "@nestjs/common";
+import { Controller, Post, Body, Response, Logger } from "@nestjs/common";
 import { AiService } from "./ai.service";
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse,
-  ApiBearerAuth,
-  ApiCookieAuth,
-} from "@nestjs/swagger";
-import { Response as ExpressResponse, Request as ExpressRequest } from "express";
-import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { ApiTags, ApiOperation, ApiBody, ApiResponse } from "@nestjs/swagger";
+import { Response as ExpressResponse } from "express";
 
 @ApiTags("ai")
 // @UseGuards(JwtAuthGuard)
@@ -39,6 +19,7 @@ export class AiController {
       properties: {
         clientId: { type: "number" },
         workspaceId: { type: "string" },
+        socketId: { type: "string" },
         message: { type: "string" },
       },
     },
@@ -46,10 +27,10 @@ export class AiController {
   @ApiResponse({ status: 200, description: "good" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async chat(
-    @Body() body: { clientId: number; workspaceId: string; message: string },
+    @Body() body: { clientId: number; workspaceId: string; socketId: string; message: string },
     @Response({ passthrough: true }) res: ExpressResponse,
   ): Promise<void> {
-    await this.aiService.requestAI(body.message, body.workspaceId, body.clientId);
+    await this.aiService.requestAI(body.message, body.workspaceId, body.clientId, body.socketId);
     res.status(200).send();
   }
 }

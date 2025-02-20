@@ -13,6 +13,8 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
   const [message, setMessage] = useState("");
   const { mutate: createAIDocument, status } = useCreateAIDocumentMutation(onCloseButton);
   const isLoading = status === "pending";
+  const { getSocketId } = useSocketStore();
+  const socketId = getSocketId() || "";
 
   const { addToast } = useToastStore();
   const handleSubmit = () => {
@@ -21,7 +23,7 @@ export const AIModal = ({ onCloseButton }: { onCloseButton: () => void }) => {
       return;
     }
     if (!isLoading) {
-      createAIDocument({ clientId, workspaceId: workspace?.id, message });
+      createAIDocument({ socketId, clientId, workspaceId: workspace?.id, message });
     }
   };
 

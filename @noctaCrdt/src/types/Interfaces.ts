@@ -62,7 +62,8 @@ export type PageIconType =
   // 협업 관련
   | "Team" // 팀 문서
   | "Shared" // 공유 문서
-  | "Feedback"; // 피드백/리뷰
+  | "Feedback" // 피드백/리뷰
+  | "AI";
 
 export type TextColorType = Exclude<BackgroundColorType, "transparent">;
 

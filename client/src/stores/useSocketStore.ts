@@ -80,6 +80,7 @@ interface SocketStore {
   setWorkspace: (workspace: WorkSpaceSerializedProps) => void;
   sendOperation: (operation: any) => void;
   sendBlockCheckboxOperation: (operation: RemoteBlockCheckboxOperation) => void;
+  getSocketId: () => string | null;
 }
 
 interface RemoteOperationHandlers {
@@ -190,6 +191,11 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
     });
 
     socket.connect();
+  },
+
+  getSocketId: () => {
+    const { socket } = get();
+    return socket?.id || null;
   },
 
   cleanup: () => {

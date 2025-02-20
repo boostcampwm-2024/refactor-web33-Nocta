@@ -11,6 +11,7 @@ export const pageTitleContainer = css({
 export const pageTitle = css({
   textStyle: "display-medium24",
   alignItems: "center",
+  outline: "none",
   paddingTop: "3px",
   color: "gray.500",
   textOverflow: "ellipsis",

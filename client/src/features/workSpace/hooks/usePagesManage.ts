@@ -34,6 +34,7 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
           workspaceId: operation.workspaceId,
           clientId: operation.clientId,
         } as RemotePageUpdateOperation);
+
         setPages((prevPages) =>
           prevPages.map((page) =>
             page.id === operation.pageId
@@ -55,6 +56,25 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
         addPage(newPage);
         if (operation.clientId === clientId) {
           setPageDataReady(newPage.id, true);
+          const socketStore = useSocketStore.getState();
+
+          // 페이지 데이터 수신 핸들러
+          const handlePageData = (data: { pageId: string; serializedPage: any }) => {
+            if (data.pageId === newPage.id) {
+              // 페이지 데이터 업데이트
+              updatePageData(newPage.id, data.serializedPage.crdt);
+
+              // 로딩 상태 업데이트
+              setPageDataReady(newPage.id, true);
+
+              // 소켓 이벤트 해제
+              socketStore.socket?.off("join/page", handlePageData);
+            }
+          };
+
+          // 소켓 이벤트 등록 및 데이터 요청
+          socketStore.socket?.on("join/page", handlePageData);
+          socketStore.socket?.emit("join/page", { pageId: newPage.id });
         }
       },
       onRemotePageDelete: (operation) => {
@@ -143,7 +163,7 @@ export const usePagesManage = (workspace: WorkSpace | null, clientId: number | n
       {
         id: newPage.id, // 여기
         title: newPage.title,
-        icon: "Docs",
+        icon: newPage.icon,
         x: PAGE_OFFSET * newPageIndex,
         y: PAGE_OFFSET * newPageIndex,
         zIndex: getZIndex(),
