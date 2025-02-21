@@ -356,9 +356,7 @@ export class WorkSpaceService implements OnModuleInit {
 
   async updatePage(workspaceId: string, pageId: string) {
     const page = await this.getPage(workspaceId, pageId);
-    if (!page) {
-      throw new Error(`Page with id ${pageId} not found`);
-    }
+    if (!page) return;
 
     const operations = this.operationStore.get(workspaceId) || [];
     const pageOperations = operations.filter((op) => op.pageId === pageId);

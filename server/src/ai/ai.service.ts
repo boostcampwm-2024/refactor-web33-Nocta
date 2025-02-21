@@ -155,41 +155,44 @@ export class AiService {
 
       rl.on("close", async () => {
         await this.processToken("\n", workspaceId, clientId, pageCreator, socketId);
-        if (pageCreator.pageTitle)
-          await this.updateCurrentPage(workspaceId, clientId, pageCreator, socketId);
+        if (pageCreator.pageTitle) {
+          if (await this.updateCurrentPage(workspaceId, clientId, pageCreator, socketId)) {
+            const currentPage = await this.workspaceService.updatePage(
+              workspaceId,
+              pageCreator.currentPage.id,
+            );
+            const pageCreateOperation = {
+              type: "pageCreate",
+              workspaceId,
+              clientId,
+              page: currentPage.serialize(),
+            } as RemotePageCreateOperation;
 
-        const currentPage = await this.workspaceService.updatePage(
-          workspaceId,
-          pageCreator.currentPage.id,
-        );
-        const pageCreateOperation = {
-          type: "pageCreate",
-          workspaceId,
-          clientId,
-          page: currentPage.serialize(),
-        } as RemotePageCreateOperation;
+            this.workspaceService
+              .getServer()
+              .to(workspaceId)
+              .except(socketId)
+              .emit("create/page", pageCreateOperation);
 
-        this.workspaceService
-          .getServer()
-          .to(workspaceId)
-          .except(socketId)
-          .emit("create/page", pageCreateOperation);
+            const pageUpdateOperation: RemotePageUpdateOperation = {
+              type: "pageUpdate",
+              workspaceId,
+              pageId: pageCreator.currentPage.id,
+              title: pageCreator.pageTitle,
+              icon: pageCreator.currentPage.icon,
+              clientId,
+            };
 
-        const pageUpdateOperation: RemotePageUpdateOperation = {
-          type: "pageUpdate",
-          workspaceId,
-          pageId: pageCreator.currentPage.id,
-          title: pageCreator.pageTitle,
-          icon: pageCreator.currentPage.icon,
-          clientId,
-        };
-
-        this.workspaceService
-          .getServer()
-          .to(workspaceId)
-          .except(socketId)
-          .emit("update/page", pageUpdateOperation);
-        console.log("SSE 스트림이 종료되었습니다.");
+            this.workspaceService
+              .getServer()
+              .to(workspaceId)
+              .except(socketId)
+              .emit("update/page", pageUpdateOperation);
+            console.log("SSE 스트림이 종료되었습니다.");
+          } else {
+            console.log("SSE 스트림이 종료되었습니다. 페이지 없음");
+          }
+        }
       });
 
       // 에러 처리도 추가할 수 있습니다.
@@ -600,7 +603,7 @@ export class AiService {
     pageCreator: PageCreator,
     socketId: string,
   ) {
-    if (!pageCreator.currentPage) return;
+    if (!pageCreator.currentPage) return false;
 
     const pageUpdateOperation: RemotePageUpdateOperation = {
       type: "pageUpdate",
@@ -615,9 +618,7 @@ export class AiService {
     const currentPage = currentWorkspace.pageList.find(
       (page) => page.id === pageCreator.currentPage.id,
     );
-    if (!currentPage) {
-      throw new Error(`Page with id ${pageCreator.currentPage.id} not found`);
-    }
+    if (!currentPage) return false;
 
     // 페이지 메타데이터 업데이트
     if (pageCreator.pageTitle) {
@@ -631,6 +632,7 @@ export class AiService {
     this.workspaceService.updateWorkspace(currentWorkspace);
 
     this.emitOperation(workspaceId, socketId, pageUpdateOperation);
+    return true;
   }
 
   private determineAnimation(type: ElementType): "rainbow" | "highlight" | "none" {
