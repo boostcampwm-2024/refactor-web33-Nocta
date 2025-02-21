@@ -5,7 +5,6 @@ import { pageControlContainer, pageControlButton, iconBox } from "./PageControlB
 
 interface PageControlButtonProps {
   testKey: string;
-  isMaximized: boolean;
   onPageMinimize?: () => void;
   onPageMaximize?: () => void;
   onPageClose?: () => void;
@@ -13,7 +12,6 @@ interface PageControlButtonProps {
 
 export const PageControlButton = ({
   testKey,
-  isMaximized,
   onPageMinimize,
   onPageMaximize,
   onPageClose,
@@ -24,7 +22,6 @@ export const PageControlButton = ({
         data-testid={`pageMinimizeButton-${testKey}`}
         className={pageControlButton({ color: "yellow" })}
         onClick={onPageMinimize}
-        disabled={isMaximized}
       >
         <MinusIcon className={iconBox} />
       </button>

@@ -8,4 +8,5 @@ export const ToastContainerStyle = css({
   right: "6",
   gap: "2",
   flexDirection: "column-reverse",
+  alignItems: "flex-end",
 });

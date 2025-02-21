@@ -4,7 +4,7 @@ import { glassContainer } from "@styled-system/recipes";
 export const glassEffect = cx(glassContainer({ border: "md" }));
 
 export const floatingButtonContainer = css({
-  zIndex: "50",
+  zIndex: "1",
   position: "fixed",
   right: "24px",
   bottom: "24px",
