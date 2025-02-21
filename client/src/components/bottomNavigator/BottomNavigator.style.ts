@@ -7,7 +7,7 @@ export const bottomNavigatorContainer = cx(
   }),
   css({
     display: "flex",
-    zIndex: 1000,
+    zIndex: 1,
     position: "fixed",
     left: "50%",
     bottom: 0,
