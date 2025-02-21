@@ -184,10 +184,18 @@ export const usePage = ({ x, y }: Position) => {
     if (isMaximized) {
       // 최대화가 된 상태에서 다시 최대화 버튼을 누르면, 원래 위치, 크기로 돌아가야함.
       setPosition(prevPosition);
-      setSize({
-        width: window.innerWidth - getSidebarWidth() - PADDING,
-        height: window.innerHeight - PADDING,
-      });
+      if (
+        size.width === window.innerWidth - getSidebarWidth() - PADDING &&
+        size.height === window.innerHeight - PADDING
+      ) {
+        setSize(prevSize);
+      } else {
+        setSize({
+          width: window.innerWidth - getSidebarWidth() - PADDING,
+          height: window.innerHeight - PADDING,
+        });
+      }
+
       setIsMaximized(false);
     } else {
       // 최대화할시, 추후 이전 상태로 돌아가기 위해 prev 위치,크기 저장
