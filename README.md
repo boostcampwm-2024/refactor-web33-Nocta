@@ -189,8 +189,8 @@ LinkedList 기반으로 논리적 시계를 활용하여 각 문자들의 인덱
 - [CRDT를 구현해보자 (1): CRDT를 알아볼까..?](https://abrupt-feta-9a9.notion.site/CRDT-1-CRDT-1f0bd7853592435f8e0bb0098a6440d1?pvs=4)
 - [CRDT를 구현해보자 (5): DB 데이터 구조 정하기](https://abrupt-feta-9a9.notion.site/CRDT-5-DB-d2bd99a60e914816a7a1568ecf038445?pvs=4)
 - [CRDT를 구현해보자 (6): CRDT라이브러리 개선 + dev에 붙이기](https://abrupt-feta-9a9.notion.site/CRDT-6-CRDT-dev-e16766117ac64a588019b4e12314416d?pvs=4)
-- [CRDT 동시성 처리](https://abrupt-feta-9a9.notion.site/CRDT-a8872af52203493e9f1fcf7b43149f0d?pvs=4)
-- [CRDT 최적화하기](https://abrupt-feta-9a9.notion.site/CRDT-d96629bf4f3045209508e5f3f55d8f36?pvs=4)
+- [CRDT 문서를 MongoDB에 저장하기](https://abrupt-feta-9a9.notion.site/CRDT-MongoDB-fc4a57c24922471c8b712375dabc29dc)
+- [배치 처리를 통한 CRDT 통신 최적화하기](https://abrupt-feta-9a9.notion.site/CRDT-d96629bf4f3045209508e5f3f55d8f36)
 
 
 ### 캐럿 이동 문제
