@@ -14,6 +14,7 @@ import { getTextOffset } from "../utils/domSyncUtils";
 interface UseBlockOperationProps {
   editorCRDT: EditorCRDT;
   pageId: string;
+  clientId: number;
   setEditorState: React.Dispatch<React.SetStateAction<EditorStateProps>>;
   onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleHrInput: (block: Block, content: string) => boolean;
@@ -29,6 +30,7 @@ export const useBlockOperation = ({
   handleHrInput,
   isLocalChange,
   sendBlockCheckboxOperation,
+  clientId,
 }: UseBlockOperationProps) => {
   const { sendCharInsertOperation, sendCharDeleteOperation } = useSocketStore();
 
@@ -121,6 +123,7 @@ export const useBlockOperation = ({
           node: charNode.node,
           blockId: block.id,
           pageId,
+          clientId,
         });
       } else if (newContent.length < currentContent.length) {
         // 문자가 삭제된 경우

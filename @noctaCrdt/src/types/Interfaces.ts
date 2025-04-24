@@ -127,6 +127,7 @@ export interface RemoteCharInsertOperation {
   node: Char;
   blockId: BlockId;
   pageId: string;
+  clientId: number;
   style?: string[];
   color?: TextColorType;
   backgroundColor?: BackgroundColorType;

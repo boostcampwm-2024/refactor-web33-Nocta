@@ -26,7 +26,13 @@ export class CRDT<T extends Node<NodeId>> {
     this.LinkedList = new LinkedListClass();
   }
 
-  localInsert(index: number, value: string, blockId?: BlockId, pageId?: string): any {
+  localInsert(
+    index: number,
+    value: string,
+    blockId?: BlockId,
+    pageId?: string,
+    clientId?: number,
+  ): any {
     // 기본 CRDT에서는 구현하지 않고, 하위 클래스에서 구현
     throw new Error("Method not implemented.");
   }
@@ -214,11 +220,12 @@ export class BlockCRDT extends CRDT<Char> {
     value: string,
     blockId: BlockId,
     pageId: string,
+    clientId: number,
     style?: string[],
     color?: TextColorType,
     backgroundColor?: BackgroundColorType,
   ): RemoteCharInsertOperation {
-    const id = new CharId(this.clock + 1, this.client); // 여기서 this를 쓰면안된다. 새유저를 넣어야함.
+    const id = new CharId(this.clock + 1, clientId); // 여기서 this를 쓰면안된다. 새유저를 넣어야함.
     console.log(this.client, "니가 누군데?");
     const newChar = new Char(value, id);
 
@@ -268,6 +275,7 @@ export class BlockCRDT extends CRDT<Char> {
       node: newChar,
       blockId,
       pageId,
+      clientId,
       style: newChar.style || [],
       color: newChar.color,
       backgroundColor: newChar.backgroundColor,

@@ -46,8 +46,9 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
 
   const editorCRDTInstance = useMemo(() => {
     let newEditorCRDT;
-    if (serializedEditorData) {
-      newEditorCRDT = new EditorCRDT(serializedEditorData.client);
+    if (serializedEditorData && clientId) {
+      newEditorCRDT = new EditorCRDT(clientId);
+      serializedEditorData.client = clientId;
       newEditorCRDT.deserialize(serializedEditorData);
     } else {
       newEditorCRDT = new EditorCRDT(clientId ? clientId : 0);
@@ -104,6 +105,7 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
     editorState,
     setEditorState,
     pageId,
+    clientId,
     sendBlockInsertOperation,
     sendBlockDeleteOperation,
     sendBlockUpdateOperation,
@@ -120,6 +122,7 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
       handleHrInput,
       isLocalChange,
       sendBlockCheckboxOperation,
+      clientId,
     });
 
   const { onTextStyleUpdate, onTextColorUpdate, onTextBackgroundColorUpdate } = useTextOptionSelect(
@@ -136,12 +139,13 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
     setEditorState,
     pageId,
     isLocalChange,
+    clientId,
   });
 
   const handleCompositionStart = (e: React.CompositionEvent<HTMLDivElement>, block: CRDTBlock) => {
     const currentText = e.data;
     composingCaret.current = getAbsoluteCaretPosition(e.currentTarget);
-    block.crdt.localInsert(composingCaret.current, currentText, block.id, pageId);
+    block.crdt.localInsert(composingCaret.current, currentText, block.id, pageId, clientId);
   };
 
   const handleCompositionUpdate = (e: React.CompositionEvent<HTMLDivElement>, block: CRDTBlock) => {
@@ -174,14 +178,22 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
           node: currentCharNode,
           blockId: block.id,
           pageId,
+          clientId,
         });
         if (space) {
-          const spaceNode = block.crdt.localInsert(currentCaret + 1, space, block.id, pageId);
+          const spaceNode = block.crdt.localInsert(
+            currentCaret + 1,
+            space,
+            block.id,
+            pageId,
+            clientId,
+          );
           sendCharInsertOperation({
             type: "charInsert",
             node: spaceNode.node,
             blockId: block.id,
             pageId,
+            clientId,
           });
         }
         block.crdt.currentCaret = currentCaret + 2;
@@ -207,11 +219,12 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
             node: charNode,
             blockId: block.id,
             pageId,
+            clientId,
           });
 
           // 다음 문자를 위한 새 노드 생성 (마지막 문자가 아닌 경우에만)
           if (index < characters.length - 1) {
-            block.crdt.localInsert(currentPosition + 1, "", block.id, pageId);
+            block.crdt.localInsert(currentPosition + 1, "", block.id, pageId, clientId);
           }
 
           currentPosition += 1;
