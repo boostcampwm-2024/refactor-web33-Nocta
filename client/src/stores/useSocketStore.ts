@@ -55,7 +55,7 @@ class BatchProcessor {
 
 interface SocketStore {
   socket: Socket | null;
-  clientId: number | null; // 숫자로 된 클라이언트Id
+  clientId: number; // 숫자로 된 클라이언트Id
   workspace: WorkSpaceSerializedProps | null;
   availableWorkspaces: WorkspaceListItem[];
   batchProcessor: BatchProcessor;
@@ -104,7 +104,7 @@ interface PageOperationsHandlers {
 
 export const useSocketStore = create<SocketStore>((set, get) => ({
   socket: null,
-  clientId: null,
+  clientId: 0,
   workspace: null,
   availableWorkspaces: [],
   workspaceConnections: {},
@@ -204,7 +204,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
       socket.removeAllListeners();
       socket.disconnect();
       sessionStorage.removeItem("currentWorkspace"); // sessionStorage 삭제
-      set({ socket: null, workspace: null, clientId: null });
+      set({ socket: null, workspace: null, clientId: 0 });
     }
   },
 
