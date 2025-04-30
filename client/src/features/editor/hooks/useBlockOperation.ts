@@ -14,6 +14,7 @@ import { getTextOffset } from "../utils/domSyncUtils";
 interface UseBlockOperationProps {
   editorCRDT: EditorCRDT;
   pageId: string;
+  clientId: number;
   setEditorState: React.Dispatch<React.SetStateAction<EditorStateProps>>;
   onKeyDown: (e: React.KeyboardEvent<HTMLDivElement>) => void;
   handleHrInput: (block: Block, content: string) => boolean;
@@ -29,6 +30,7 @@ export const useBlockOperation = ({
   handleHrInput,
   isLocalChange,
   sendBlockCheckboxOperation,
+  clientId,
 }: UseBlockOperationProps) => {
   const { sendCharInsertOperation, sendCharDeleteOperation } = useSocketStore();
 
@@ -79,7 +81,7 @@ export const useBlockOperation = ({
         // 맨 앞에 삽입
         if (caretPosition === 0) {
           const [addedChar] = newContent;
-          charNode = block.crdt.localInsert(0, addedChar, block.id, pageId);
+          charNode = block.crdt.localInsert(0, addedChar, block.id, pageId, clientId);
         } else if (caretPosition > currentContent.length) {
           // 맨 뒤에 삽입
           let prevChar;
@@ -95,6 +97,7 @@ export const useBlockOperation = ({
             addedChar,
             block.id,
             pageId,
+            clientId,
             prevChar?.style,
             prevChar?.color,
             prevChar?.backgroundColor,
@@ -110,6 +113,7 @@ export const useBlockOperation = ({
             addedChar,
             block.id,
             pageId,
+            clientId,
             prevChar?.style,
             prevChar?.color,
             prevChar?.backgroundColor,
@@ -121,6 +125,7 @@ export const useBlockOperation = ({
           node: charNode.node,
           blockId: block.id,
           pageId,
+          clientId,
         });
       } else if (newContent.length < currentContent.length) {
         // 문자가 삭제된 경우

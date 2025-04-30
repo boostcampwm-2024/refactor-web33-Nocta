@@ -150,45 +150,54 @@ export abstract class LinkedList<T extends Node<NodeId>> {
       throw new Error(`InsertAtIndex failed: ${e}`);
     }
   }
-
   insertById(node: T): void {
     if (this.getNode(node.id)) return;
 
-    if (!node.prev) {
-      node.next = this.head;
-      node.prev = null;
+    this.setNode(node.id, node);
 
-      if (this.head) {
-        const oldHead = this.getNode(this.head);
-        if (oldHead) {
-          oldHead.prev = node.id;
-        }
-      }
-
+    if (!this.head) {
       this.head = node.id;
-      this.setNode(node.id, node);
+      node.prev = null;
+      node.next = null;
       return;
     }
 
-    const prevNode = this.getNode(node.prev);
-    if (!prevNode) {
-      throw new Error(`Previous node not found: ${JSON.stringify(node.prev)}`);
+    if (!node.prev) {
+      node.next = this.head;
+      const headNode = this.getNode(this.head);
+      if (headNode) {
+        headNode.prev = node.id;
+      }
+      this.head = node.id;
+      return;
     }
 
+    // Case 3: 노드의 prev가 있으면 해당 노드 다음에 삽입
+    const prevNode = this.getNode(node.prev);
+    if (!prevNode) {
+      // prev 노드가 없으면 head로 설정
+      node.prev = null;
+      node.next = this.head;
+      const headNode = this.getNode(this.head);
+      if (headNode) {
+        headNode.prev = node.id;
+      }
+      this.head = node.id;
+      return;
+    }
+
+    // prevNode 다음에 삽입
     node.next = prevNode.next;
-    node.prev = prevNode.id;
     prevNode.next = node.id;
 
+    // 다음 노드가 있으면 해당 노드의 prev 업데이트
     if (node.next) {
       const nextNode = this.getNode(node.next);
       if (nextNode) {
         nextNode.prev = node.id;
       }
     }
-
-    this.setNode(node.id, node);
   }
-
   getNodesBetween(startIndex: number, endIndex: number): T[] {
     if (startIndex < 0 || endIndex < startIndex) {
       throw new Error("Invalid indices");
@@ -217,23 +226,26 @@ export abstract class LinkedList<T extends Node<NodeId>> {
 
     return result;
   }
-
   stringify(): string {
-    let currentNodeId = this.head;
-    let result = "";
-
-    while (currentNodeId !== null) {
-      const currentNode = this.getNode(currentNodeId);
-      if (!currentNode) break;
-      if (!currentNode.deleted) {
-        result += currentNode.value;
-      }
-      currentNodeId = currentNode.next;
-    }
-
-    return result;
+    // 노드들을 ID 기반으로 정렬하여 일관된 순서 보장
+    const sortedNodes = this.sortNodes();
+    return sortedNodes.map((node) => node.value).join("");
   }
 
+  // 새로운 메서드 추가
+  sortNodes(): T[] {
+    const nodes = Object.values(this.nodeMap).filter((node) => !node.deleted);
+
+    // ID 기반 정렬 (Lamport 타임스탬프 + 클라이언트 ID)
+    return nodes.sort((a, b) => {
+      // clock이 작은 노드가 앞에 위치
+      if (a.id.clock !== b.id.clock) {
+        return a.id.clock - b.id.clock;
+      }
+      // clock이 같으면 client ID가 작은 노드가 앞에 위치
+      return a.id.client - b.id.client;
+    });
+  }
   spread(): T[] {
     let currentNodeId = this.head;
     const result: T[] = [];
@@ -247,7 +259,36 @@ export abstract class LinkedList<T extends Node<NodeId>> {
     }
     return result;
   }
+  // LinkedList 클래스에 추가
+  rebalanceLinks(): void {
+    // 모든 노드를 ID 기반으로 정렬
+    const sortedNodes = Object.values(this.nodeMap)
+      .filter((node) => !node.deleted)
+      .sort((a, b) => {
+        if (a.prev && b.prev && a.prev.equals(b.prev)) {
+          return a.precedes(b) ? -1 : 1;
+        }
+        return a.id.clock - b.id.clock || a.id.client - b.id.client;
+      });
 
+    if (sortedNodes.length === 0) {
+      this.head = null;
+      return;
+    }
+
+    // 첫 번째 노드를 head로 설정
+    this.head = sortedNodes[0].id;
+    sortedNodes[0].prev = null;
+
+    // 나머지 노드들의 prev/next 포인터 재설정
+    for (let i = 0; i < sortedNodes.length - 1; i++) {
+      sortedNodes[i].next = sortedNodes[i + 1].id;
+      sortedNodes[i + 1].prev = sortedNodes[i].id;
+    }
+
+    // 마지막 노드의 next를 null로 설정
+    sortedNodes[sortedNodes.length - 1].next = null;
+  }
   serialize(): any {
     return {
       head: this.head ? this.head.serialize() : null,

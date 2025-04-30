@@ -26,7 +26,13 @@ export class CRDT<T extends Node<NodeId>> {
     this.LinkedList = new LinkedListClass();
   }
 
-  localInsert(index: number, value: string, blockId?: BlockId, pageId?: string): any {
+  localInsert(
+    index: number,
+    value: string,
+    blockId?: BlockId,
+    pageId?: string,
+    clientId?: number,
+  ): any {
     // 기본 CRDT에서는 구현하지 않고, 하위 클래스에서 구현
     throw new Error("Method not implemented.");
   }
@@ -214,35 +220,73 @@ export class BlockCRDT extends CRDT<Char> {
     value: string,
     blockId: BlockId,
     pageId: string,
+    clientId: number,
     style?: string[],
     color?: TextColorType,
     backgroundColor?: BackgroundColorType,
   ): RemoteCharInsertOperation {
-    const id = new CharId(this.clock + 1, this.client);
-    const { node } = this.LinkedList.insertAtIndex(index, value, id) as { node: Char };
+    const id = new CharId(this.clock + 1, clientId); // 여기서 this를 쓰면안된다. 새유저를 넣어야함.
+    console.log(this.client, "니가 누군데?");
+    const newChar = new Char(value, id);
+
     if (style && style.length > 0) {
-      node.style = style;
+      newChar.style = style;
     }
     if (color) {
-      node.color = color;
+      newChar.color = color;
     }
     if (backgroundColor) {
-      node.backgroundColor = backgroundColor;
+      newChar.backgroundColor = backgroundColor;
     }
+
+    const nodes = this.LinkedList.spread();
+
+    // 삽입 위치에 따른 prev/next 설정
+    if (index <= 0) {
+      // 맨 앞에 삽입
+      newChar.prev = null;
+      newChar.next = this.LinkedList.head;
+    } else if (index >= nodes.length) {
+      // 맨 뒤에 삽입
+      if (nodes.length > 0) {
+        newChar.prev = nodes[nodes.length - 1].id;
+        newChar.next = null;
+      } else {
+        newChar.prev = null;
+        newChar.next = null;
+      }
+    } else {
+      // 중간에 삽입 (index 위치에 있는 문자 앞에 삽입)
+      newChar.prev = nodes[index - 1].id;
+      newChar.next = nodes[index].id;
+    }
+
+    // LinkedList에 삽입
+    this.LinkedList.insertById(newChar);
+    // this.LinkedList.rebalanceLinks();
+    // clock 업데이트
     this.clock += 1;
+
+    // 현재 캐럿 위치 업데이트 (삽입 위치 다음으로)
+    this.currentCaret = index + 1;
+
     const operation: RemoteCharInsertOperation = {
       type: "charInsert",
-      node,
+      node: newChar,
       blockId,
       pageId,
-      style: node.style || [],
-      color: node.color,
-      backgroundColor: node.backgroundColor,
+      clientId,
+      style: newChar.style || [],
+      color: newChar.color,
+      backgroundColor: newChar.backgroundColor,
     };
 
     return operation;
   }
-
+  read(): string {
+    // 정렬된 노드 기반으로 문자열 생성
+    return (this.LinkedList as TextLinkedList).stringify();
+  }
   localDelete(index: number, blockId: BlockId, pageId: string): RemoteCharDeleteOperation {
     if (index < 0 || index >= this.LinkedList.spread().length) {
       throw new Error(`Invalid index: ${index}`);

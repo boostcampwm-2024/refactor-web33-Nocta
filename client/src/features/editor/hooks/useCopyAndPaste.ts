@@ -19,6 +19,7 @@ interface UseCopyAndPasteProps {
   pageId: string;
   setEditorState: React.Dispatch<React.SetStateAction<EditorStateProps>>;
   isLocalChange: React.MutableRefObject<boolean>;
+  clientId: number;
 }
 
 export const useCopyAndPaste = ({
@@ -26,6 +27,7 @@ export const useCopyAndPaste = ({
   pageId,
   setEditorState,
   isLocalChange,
+  clientId,
 }: UseCopyAndPasteProps) => {
   const {
     sendCharInsertOperation,
@@ -119,6 +121,7 @@ export const useCopyAndPaste = ({
             char.value,
             block.id,
             pageId,
+            clientId,
             char.style,
             char.color,
             char.backgroundColor,
@@ -128,6 +131,7 @@ export const useCopyAndPaste = ({
             node: charNode.node,
             blockId: block.id,
             pageId,
+            clientId,
             style: char.style,
             color: char.color,
             backgroundColor: char.backgroundColor,
@@ -164,7 +168,7 @@ export const useCopyAndPaste = ({
             });
             currentLine.split("").forEach((char, index) => {
               sendCharInsertOperation(
-                newBlock.node.crdt.localInsert(index, char, newBlock.node.id, pageId),
+                newBlock.node.crdt.localInsert(index, char, newBlock.node.id, pageId, clientId),
               );
             });
             const isMarkdownGrammer = checkMarkdownPattern(currentLine);
@@ -192,12 +196,19 @@ export const useCopyAndPaste = ({
           // 텍스트를 한 글자씩 순차적으로 삽입
           text.split("").forEach((char, index) => {
             const insertPosition = caretPosition + index;
-            const charNode = block.crdt.localInsert(insertPosition, char, block.id, pageId);
+            const charNode = block.crdt.localInsert(
+              insertPosition,
+              char,
+              block.id,
+              pageId,
+              clientId,
+            );
             sendCharInsertOperation({
               type: "charInsert",
               node: charNode.node,
               blockId: block.id,
               pageId,
+              clientId,
             });
           });
           const isMarkdownGrammer = checkMarkdownPattern(text);

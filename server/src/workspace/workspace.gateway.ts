@@ -754,6 +754,7 @@ export class WorkspaceGateway implements OnGatewayInit, OnGatewayConnection, OnG
         node: data.node,
         blockId: data.blockId,
         pageId: data.pageId,
+        clientId: data.clientId,
         style: data.node.style || [],
         color: data.node.color ? data.node.color : "black",
         backgroundColor: data.node.backgroundColor ? data.node.backgroundColor : "transparent",

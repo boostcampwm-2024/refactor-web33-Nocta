@@ -22,6 +22,7 @@ interface useBlockOptionSelectProps {
     }>
   >;
   pageId: string;
+  clientId: number;
   sendBlockUpdateOperation: (operation: RemoteBlockUpdateOperation) => void;
   sendBlockDeleteOperation: (operation: RemoteBlockDeleteOperation) => void;
   sendBlockInsertOperation: (operation: RemoteBlockInsertOperation) => void;
@@ -33,6 +34,7 @@ export const useBlockOptionSelect = ({
   editorState,
   setEditorState,
   pageId,
+  clientId,
   sendBlockUpdateOperation,
   sendBlockDeleteOperation,
   sendBlockInsertOperation,
@@ -113,6 +115,7 @@ export const useBlockOptionSelect = ({
           char.value,
           operation.node.id,
           pageId,
+          clientId,
         );
         sendCharInsertOperation(insertOperation);
       });

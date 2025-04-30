@@ -23,6 +23,7 @@ interface useMarkdownGrammerProps {
     }>
   >;
   pageId: string;
+  clientId: number;
   sendBlockInsertOperation: (operation: RemoteBlockInsertOperation) => void;
   sendBlockDeleteOperation: (operation: RemoteBlockDeleteOperation) => void;
   sendCharDeleteOperation: (operation: RemoteCharDeleteOperation) => void;
@@ -35,6 +36,7 @@ export const useMarkdownGrammer = ({
   editorState,
   setEditorState,
   pageId,
+  clientId,
   sendBlockInsertOperation,
   sendBlockDeleteOperation,
   sendCharDeleteOperation,
@@ -169,6 +171,7 @@ export const useMarkdownGrammer = ({
                   char,
                   operation.node.id,
                   pageId,
+                  clientId,
                   currentCharNode.style,
                   currentCharNode.color,
                   currentCharNode.backgroundColor,
@@ -328,6 +331,7 @@ export const useMarkdownGrammer = ({
                       currentContent[i],
                       prevBlock.id,
                       pageId,
+                      clientId,
                       currentCharNode.style,
                       currentCharNode.color,
                       currentCharNode.backgroundColor,

@@ -523,6 +523,7 @@ export class AiService {
       node: charNode,
       blockId: pageCreator.currentBlock.id,
       pageId: pageCreator.currentPage.id,
+      clientId,
       style: [],
       color: "black",
       backgroundColor: "transparent",
