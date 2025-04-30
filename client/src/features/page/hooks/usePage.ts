@@ -63,7 +63,7 @@ export const usePage = ({ x, y }: Position) => {
 
   const applySnap = (
     target: ReturnType<typeof computeSnapTarget>,
-    sidebarWidth: number,
+    _sidebarWidth: number,
     availableWidth: number,
     fullHeight: number,
   ) => {
