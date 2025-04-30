@@ -5,6 +5,7 @@ import { Position, Size, Direction } from "@src/types/page";
 import { useIsSidebarOpen } from "@stores/useSidebarStore";
 
 const PADDING = SPACING.MEDIUM * 2;
+const SNAP_THRESHOLD = 24; // 스냅을 위한 임계값
 
 // 만약 maximize 상태면, 화면이 커질때도 꽉 촤게 해줘야함.
 export const usePage = ({ x, y }: Position) => {
@@ -23,6 +24,93 @@ export const usePage = ({ x, y }: Position) => {
   const isSidebarOpen = useIsSidebarOpen();
 
   const getSidebarWidth = () => (isSidebarOpen ? SIDE_BAR.WIDTH : SIDE_BAR.MIN_WIDTH);
+
+  const getSidebarActualWidth = () => {
+    const sidebar = document.querySelector("[data-sidebar]") as HTMLElement | null;
+    return sidebar?.offsetWidth ?? 0;
+  };
+
+  const computeSnapTarget = (
+    x: number,
+    y: number,
+    sidebarWidth: number,
+  ): "topLeft" | "topRight" | "left" | "right" | "bottomLeft" | "bottomRight" | null => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Y 영역 퍼센트 기반 구간
+    const topLimit = height * 0.05; // 상단 5%
+    const middleEnd = height * 0.5; // 중간 끝: 50%
+    const bottomStart = middleEnd; // 하단 시작
+
+    const isTop = y < topLimit;
+    const isMiddle = y >= topLimit && y < middleEnd;
+    const isBottom = y >= bottomStart;
+
+    // X 영역 좌우 끝 임계값
+    const isLeftEdge = x <= SNAP_THRESHOLD + sidebarWidth;
+    const isRightEdge = x >= width - SNAP_THRESHOLD;
+
+    if (isLeftEdge && isTop) return "topLeft";
+    if (isRightEdge && isTop) return "topRight";
+    if (isLeftEdge && isMiddle) return "left";
+    if (isRightEdge && isMiddle) return "right";
+    if (isLeftEdge && isBottom) return "bottomLeft";
+    if (isRightEdge && isBottom) return "bottomRight";
+
+    return null;
+  };
+
+  const applySnap = (
+    target: ReturnType<typeof computeSnapTarget>,
+    sidebarWidth: number,
+    availableWidth: number,
+    fullHeight: number,
+  ) => {
+    const halfWidth = availableWidth / 2;
+    const halfHeight = fullHeight / 2;
+    const leftX = 0;
+    const rightX = halfWidth - PADDING;
+
+    const base = {
+      width: halfWidth,
+      isMaximized: false,
+    };
+
+    const apply = (x: number, y: number, height: number) => {
+      setPrevPosition(position);
+      setPrevSize(size);
+      setPosition({ x, y });
+      setSize({ ...base, height });
+      setIsMaximized(false);
+    };
+
+    switch (target) {
+      case "left":
+        apply(leftX, 0, fullHeight);
+        break;
+
+      case "right":
+        apply(rightX, 0, fullHeight);
+        break;
+
+      case "topLeft":
+        apply(leftX, 0, halfHeight);
+        break;
+
+      case "topRight":
+        apply(rightX, 0, halfHeight);
+        break;
+
+      case "bottomLeft":
+        apply(leftX, halfHeight, halfHeight);
+        break;
+
+      case "bottomRight":
+        apply(rightX, halfHeight, halfHeight);
+        break;
+    }
+  };
 
   const pageDrag = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -43,10 +131,21 @@ export const usePage = ({ x, y }: Position) => {
       setPosition({ x: newX, y: newY });
     };
 
-    const handleDragEnd = () => {
+    const handleDragEnd = (e: PointerEvent) => {
       element.style.cursor = "default";
+
       document.removeEventListener("pointermove", handleDragMove);
       document.removeEventListener("pointerup", handleDragEnd);
+
+      const sidebarWidth = getSidebarActualWidth();
+      const availableWidth = window.innerWidth - sidebarWidth;
+      const fullHeight = window.innerHeight - PADDING;
+
+      const snapTarget = computeSnapTarget(e.clientX, e.clientY, sidebarWidth);
+
+      if (snapTarget) {
+        applySnap(snapTarget, sidebarWidth, availableWidth, fullHeight);
+      }
     };
 
     document.addEventListener("pointermove", handleDragMove);

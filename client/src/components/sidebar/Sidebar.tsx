@@ -84,6 +84,7 @@ export const Sidebar = ({
 
   return (
     <motion.aside
+      data-sidebar
       data-testid="sidebar"
       className={sidebarContainer}
       initial="open"
