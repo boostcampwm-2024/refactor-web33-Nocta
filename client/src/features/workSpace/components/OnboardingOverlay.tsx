@@ -100,6 +100,9 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
   const handleEnter = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Enter") {
       handleClose();
+    } else if (e.key === "Escape") {
+      setIsVisible(false);
+      localStorage.setItem("hasCompletedOnboarding", "true");
     }
   };
   const handlePrevious = () => {
