@@ -28,8 +28,10 @@ export const usePage = ({ x, y }: Position) => {
     e.preventDefault();
     const startX = e.clientX - position.x;
     const startY = e.clientY - position.y;
+    const element = e.currentTarget as HTMLElement;
 
     const handleDragMove = (e: PointerEvent) => {
+      element.style.cursor = "grabbing";
       const newX = Math.max(
         0,
         Math.min(window.innerWidth - size.width - getSidebarWidth() - PADDING, e.clientX - startX),
@@ -42,6 +44,7 @@ export const usePage = ({ x, y }: Position) => {
     };
 
     const handleDragEnd = () => {
+      element.style.cursor = "default";
       document.removeEventListener("pointermove", handleDragMove);
       document.removeEventListener("pointerup", handleDragEnd);
     };
