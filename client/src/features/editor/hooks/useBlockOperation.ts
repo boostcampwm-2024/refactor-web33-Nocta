@@ -81,7 +81,7 @@ export const useBlockOperation = ({
         // 맨 앞에 삽입
         if (caretPosition === 0) {
           const [addedChar] = newContent;
-          charNode = block.crdt.localInsert(0, addedChar, block.id, pageId);
+          charNode = block.crdt.localInsert(0, addedChar, block.id, pageId, clientId);
         } else if (caretPosition > currentContent.length) {
           // 맨 뒤에 삽입
           let prevChar;
@@ -97,6 +97,7 @@ export const useBlockOperation = ({
             addedChar,
             block.id,
             pageId,
+            clientId,
             prevChar?.style,
             prevChar?.color,
             prevChar?.backgroundColor,
@@ -112,6 +113,7 @@ export const useBlockOperation = ({
             addedChar,
             block.id,
             pageId,
+            clientId,
             prevChar?.style,
             prevChar?.color,
             prevChar?.backgroundColor,

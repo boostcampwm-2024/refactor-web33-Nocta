@@ -131,6 +131,7 @@ export const useCopyAndPaste = ({
             node: charNode.node,
             blockId: block.id,
             pageId,
+            clientId,
             style: char.style,
             color: char.color,
             backgroundColor: char.backgroundColor,
@@ -207,6 +208,7 @@ export const useCopyAndPaste = ({
               node: charNode.node,
               blockId: block.id,
               pageId,
+              clientId,
             });
           });
           const isMarkdownGrammer = checkMarkdownPattern(text);

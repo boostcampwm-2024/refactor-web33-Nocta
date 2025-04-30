@@ -94,6 +94,7 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
       editorState,
       setEditorState,
       pageId,
+      clientId,
       sendBlockUpdateOperation,
       sendBlockDeleteOperation,
       sendBlockInsertOperation,
