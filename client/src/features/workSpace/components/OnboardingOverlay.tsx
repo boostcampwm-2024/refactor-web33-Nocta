@@ -68,7 +68,7 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
     },
   ];
   useEffect(() => {
-    const hasCompletedOnboarding = sessionStorage.getItem("hasCompletedOnboarding");
+    const hasCompletedOnboarding = localStorage.getItem("hasCompletedOnboarding");
     if (isShow && hasCompletedOnboarding === null) {
       // 요소들이 렌더링될 시간을 주기 위해 약간의 딜레이 추가
       const timer = setTimeout(() => {
@@ -94,7 +94,7 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
       setCurrentStep((prev) => prev + 1);
     } else {
       setIsVisible(false);
-      sessionStorage.setItem("hasCompletedOnboarding", "true");
+      localStorage.setItem("hasCompletedOnboarding", "true");
     }
   };
   const handleEnter = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -109,7 +109,7 @@ export const OnboardingOverlay = ({ isShow }: OnboardingOverlayProps) => {
   };
   const handleOverlayClose = () => {
     setIsVisible(false);
-    sessionStorage.setItem("hasCompletedOnboarding", "true");
+    localStorage.setItem("hasCompletedOnboarding", "true");
   };
   const getTargetPosition = (selector: string) => {
     const element = document.querySelector(selector);

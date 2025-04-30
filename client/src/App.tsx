@@ -3,8 +3,8 @@ import { ErrorModal } from "@components/modal/ErrorModal";
 import { WorkSpace } from "@features/workSpace/WorkSpace";
 import { useErrorStore } from "@stores/useErrorStore";
 import { useUserInfo } from "@stores/useUserStore";
-import { useSocketStore } from "./stores/useSocketStore";
 import { BackgroundImage } from "./components/backgroundImage/BackgroundImage";
+import { useSocketStore } from "./stores/useSocketStore";
 
 const App = () => {
   // TODO 라우터, react query 설정
@@ -13,7 +13,7 @@ const App = () => {
 
   useEffect(() => {
     const socketStore = useSocketStore.getState();
-    const savedWorkspace = sessionStorage.getItem("currentWorkspace");
+    const savedWorkspace = localStorage.getItem("currentWorkspace");
     const workspaceId = savedWorkspace ? JSON.parse(savedWorkspace).id : null;
     socketStore.init(userId, workspaceId);
 

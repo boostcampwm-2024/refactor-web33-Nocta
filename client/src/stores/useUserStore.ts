@@ -26,7 +26,7 @@ export const useUserStore = create<UserStore>()(
           set(() => ({ id, name, accessToken })),
         removeUserInfo: () => {
           set(() => ({ id: null, name: null, accessToken: null }));
-          sessionStorage.removeItem("nocta-storage");
+          localStorage.removeItem("nocta-storage");
         },
         getUserInfo: () => {
           const state = get();
@@ -45,7 +45,7 @@ export const useUserStore = create<UserStore>()(
     }),
     {
       name: "nocta-storage",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         id: state.id,
         name: state.name,

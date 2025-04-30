@@ -13,7 +13,7 @@ export const useWorkspaceInit = (): UseWorkspaceInitReturn => {
   const [error, setError] = useState<Error | null>(null);
   const { socket } = useSocketStore();
 
-  const isFirstVisit = !sessionStorage.getItem("hasVisitedBefore");
+  const isFirstVisit = !localStorage.getItem("hasVisitedBefore");
 
   useEffect(() => {
     const initializeWorkspace = async () => {
@@ -23,9 +23,9 @@ export const useWorkspaceInit = (): UseWorkspaceInitReturn => {
 
         await new Promise((resolve) => setTimeout(resolve, IntroWaitTime));
 
-        // 첫 방문 표시 저장 (sessionStorage 사용)
+        // 첫 방문 표시 저장 (localStorage 사용)
         if (isFirstVisit) {
-          sessionStorage.setItem("hasVisitedBefore", "true");
+          localStorage.setItem("hasVisitedBefore", "true");
         }
         setIsInitialized(true);
       } catch (err) {
