@@ -460,6 +460,23 @@ export const usePage = ({ x, y }: Position) => {
     };
   }, [position, size, isSidebarOpen]);
 
+  useEffect(() => {
+    if (!isSnapped) return;
+
+    const sidebarWidth = getSidebarWidth();
+    const availableWidth = window.innerWidth - sidebarWidth;
+
+    const isSnappedRight = position.x !== 0;
+
+    const adjustedWidth = availableWidth / 2 - PADDING * 0.75;
+
+    setSize((prev) => ({ ...prev, width: adjustedWidth }));
+    if (isSnappedRight) {
+      const rightX = adjustedWidth + PADDING * 0.5;
+      setPosition((prev) => ({ ...prev, x: rightX }));
+    }
+  }, [isSidebarOpen]);
+
   return {
     position,
     size,
