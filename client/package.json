@@ -17,6 +17,7 @@
     "@lottiefiles/react-lottie-player": "^3.5.4",
     "@noctaCrdt": "workspace:*",
     "@pandabox/panda-plugins": "^0.0.8",
+    "@radix-ui/react-tooltip": "^1.2.4",
     "@tanstack/react-query": "^5.60.5",
     "@tanstack/react-virtual": "^3.11.2",
     "axios": "^1.7.7",
