@@ -13,6 +13,7 @@ export const snapSkeleton = css({
 export const snapBox = cva({
   base: {
     position: "absolute",
+    border: "4px solid #004585",
     borderRadius: "md",
     margin: "md",
     opacity: 0,
