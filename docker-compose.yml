@@ -1,15 +1,4 @@
 services:
-  frontend:
-    build:
-      context: .
-      dockerfile: ./client/Dockerfile
-    volumes:
-      - ./client/dist:/app/client/dist
-    environment:
-      - NODE_ENV=${NODE_ENV}
-      - VITE_API_URL=${VITE_API_URL}
-    command: pnpm --filter client run build
-
   backend:
     build:
       context: .
@@ -27,18 +16,16 @@ services:
       - AI_API_KEY=${AI_API_KEY}
 
   nginx:
-    build:
-      context: .
-      dockerfile: ./nginx/Dockerfile
+    image: nginx:alpine
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./client/dist:/usr/share/nginx/html
+      - ./client/dist:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ~/certbot/www:/var/www/certbot
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
-      - frontend
       - backend
 
 networks:
