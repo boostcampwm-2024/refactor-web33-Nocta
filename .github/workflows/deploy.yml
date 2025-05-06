@@ -33,19 +33,12 @@ jobs:
           name: client-dist
           path: client/dist
 
-  deploy:
-    name: Deploy on Server
-    needs: build-frontend
+  build-backend:
+    name: Backend Build
     runs-on: [self-hosted, boost-was]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Download client-dist
-        uses: actions/download-artifact@v4
-        with:
-          name: client-dist
-          path: client/dist
 
       - name: Build Backend Image
         env:
@@ -58,6 +51,20 @@ jobs:
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
         run: docker-compose build backend
+
+  deploy:
+    name: Deploy on Server
+    needs: [build-frontend, build-backend]
+    runs-on: [self-hosted, boost-was]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download client-dist
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
 
       - name: Start Services
         env:
