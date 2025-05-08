@@ -70,7 +70,16 @@ jobs:
           path: client/dist
 
       - name: Reload Nginx
-        run: docker-compose exec nginx nginx -s reload
+        env:
+          NODE_ENV: production
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: docker-compose up -d --no-build --force-recreate nginx
 
       - name: Cleanup
         run: docker image prune -f
