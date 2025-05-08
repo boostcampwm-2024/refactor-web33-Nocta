@@ -24,7 +24,7 @@ export const snapBox = cva({
     isActive: {
       true: {
         opacity: 0.5,
-        backgroundColor: "gray.300",
+        backgroundColor: "gray.100",
       },
       false: {
         border: "none",
