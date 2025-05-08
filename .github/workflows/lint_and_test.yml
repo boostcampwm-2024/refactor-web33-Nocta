@@ -7,7 +7,7 @@ on:
       - dev
 
 jobs:
-  lint_and_unit_test:
+  lint-and-unit-test:
     name: Lint and Unit Test
     runs-on: ubuntu-latest
 
@@ -43,8 +43,28 @@ jobs:
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
-  test_building_docker_image:
-    name: Test Building Docker Image
+  frontend-build-test:
+    name: Frontend Build Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm install
+      - run: pnpm --filter client run build
+
+  backend-build-test:
+    name: Backend Build Test
     runs-on: ubuntu-latest
 
     steps:
@@ -77,4 +97,4 @@ jobs:
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: |
-          docker-compose build frontend backend
+          docker-compose build backend

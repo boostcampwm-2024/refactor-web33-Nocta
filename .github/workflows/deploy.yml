@@ -7,17 +7,40 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Deploy on Server
-    runs-on: [self-hosted, boost-was] # 라벨에 해당하는 runner로 실행
-
+  build-frontend:
+    name: Frontend Build
+    runs-on: ubuntu-latest
     steps:
-      # 1. 레포지토리 클론
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm install
+      - run: pnpm --filter client run build
+
+      - name: Upload client/dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+  build-backend:
+    name: Backend Build
+    runs-on: [self-hosted, boost-was]
+    steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Docker Compose로 서비스 빌드 및 재시작
-      - name: Build and Deploy Docker Images
+      - name: Build Backend Image
         env:
           NODE_ENV: production
           MONGO_URI: ${{ secrets.MONGO_URI }}
@@ -27,9 +50,33 @@ jobs:
           AI_PROMPT: ${{ secrets.AI_PROMPT }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: |
-          docker-compose up -d --build
+        run: docker-compose build backend
 
-      # 3. Clean up Old Images
-      - name: Remove Dangling Images
+  deploy:
+    name: Deploy on Server
+    needs: [build-frontend, build-backend]
+    runs-on: [self-hosted, boost-was]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Download client-dist
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+
+      - name: Start Services
+        env:
+          NODE_ENV: production
+          MONGO_URI: ${{ secrets.MONGO_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          AI_PROMPT: ${{ secrets.AI_PROMPT }}
+          AI_API_URL: ${{ secrets.AI_API_URL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+        run: docker-compose up -d --no-build
+
+      - name: Cleanup
         run: docker image prune -f
