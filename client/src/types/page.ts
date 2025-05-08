@@ -35,3 +35,5 @@ export const DIRECTIONS = [
 ] as const;
 
 export type Direction = (typeof DIRECTIONS)[number];
+
+export type SnapTarget = "left" | "right" | "topLeft" | "topRight" | "bottomLeft" | "bottomRight";

@@ -7,10 +7,13 @@ import { Sidebar } from "@components/sidebar/Sidebar";
 import { AIButton } from "@features/ai/AIButton";
 import { Page } from "@features/page/Page";
 import { ToastContainer } from "@src/components/Toast/ToastContainer";
+import { useSnapTargetStore } from "@src/stores/useSnapStore";
 import { useSocketStore } from "@src/stores/useSocketStore";
+import { SnapTarget } from "@src/types/page";
 import { workSpaceContainer, content } from "./WorkSpace.style";
 import { IntroScreen } from "./components/IntroScreen";
 import { OnboardingOverlay } from "./components/OnboardingOverlay";
+import { SnapOverlay } from "./components/SnapOverlay";
 import { usePagesManage } from "./hooks/usePagesManage";
 import { useWorkspaceInit } from "./hooks/useWorkspaceInit";
 
@@ -18,18 +21,19 @@ export const WorkSpace = () => {
   const [workspace, setWorkspace] = useState<WorkSpaceClass | null>(null);
   const { isLoading, isInitialized, error } = useWorkspaceInit();
   const { workspace: workspaceMetadata, clientId } = useSocketStore();
+  const activeTarget = useSnapTargetStore((state) => state.current);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const snapTargets: SnapTarget[] = [
+    "left",
+    "right",
+    "topLeft",
+    "topRight",
+    "bottomLeft",
+    "bottomRight",
+  ];
 
-  const {
-    pages,
-    fetchPage,
-    selectPage,
-    closePage,
-    updatePage,
-    initPages,
-    // initPagePosition,
-    openPage,
-  } = usePagesManage(workspace, clientId);
+  const { pages, fetchPage, selectPage, closePage, updatePage, initPages, openPage } =
+    usePagesManage(workspace, clientId);
   const visiblePages = pages.filter((page) => page.isVisible && page.isLoaded);
 
   useEffect(() => {
@@ -82,6 +86,13 @@ export const WorkSpace = () => {
           handlePageUpdate={updatePage}
         />
         <div className={content}>
+          {activeTarget && (
+            <SnapOverlay
+              activeTarget={activeTarget.target}
+              activeStyle={activeTarget.style}
+              snapTargets={snapTargets}
+            />
+          )}
           {visiblePages.map((page, idx) => (
             <Page
               key={page.id}

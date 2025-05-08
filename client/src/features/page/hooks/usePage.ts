@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { PAGE, SIDE_BAR } from "@constants/size";
 import { SPACING } from "@constants/spacing";
-import { Position, Size, Direction } from "@src/types/page";
+import { useSnapTargetStore } from "@src/stores/useSnapStore";
+import { Position, Size, Direction, SnapTarget } from "@src/types/page";
 import { useIsSidebarOpen } from "@stores/useSidebarStore";
 
 const PADDING = SPACING.MEDIUM * 2;
+const SNAP_THRESHOLD = 12; // 스냅을 위한 임계값
+const DRAG_THRESHOLD = 12; // 드래그를 위한 임계값
 
 // 만약 maximize 상태면, 화면이 커질때도 꽉 촤게 해줘야함.
 export const usePage = ({ x, y }: Position) => {
@@ -20,30 +23,183 @@ export const usePage = ({ x, y }: Position) => {
   });
 
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isSnapped, setIsSnapped] = useState(false);
   const isSidebarOpen = useIsSidebarOpen();
+  const { setTarget, reset } = useSnapTargetStore();
 
   const getSidebarWidth = () => (isSidebarOpen ? SIDE_BAR.WIDTH : SIDE_BAR.MIN_WIDTH);
+
+  const getSidebarActualWidth = () => {
+    const sidebar = document.querySelector("[data-sidebar]") as HTMLElement | null;
+    return sidebar?.offsetWidth ?? 0;
+  };
+
+  const computeSnapTarget = (
+    x: number,
+    y: number,
+    sidebarWidth: number,
+  ): "topLeft" | "topRight" | "left" | "right" | "bottomLeft" | "bottomRight" | null => {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    // Y 영역 퍼센트 기반 구간
+    const topLimit = height * 0.05;
+    const bottomLimit = height * 0.9;
+
+    const isTop = y < topLimit;
+    const isMiddle = y > topLimit && y < bottomLimit;
+    const isBottom = y >= bottomLimit;
+
+    // X 영역 좌우 끝 임계값
+    const isLeftEdge = x <= SNAP_THRESHOLD + sidebarWidth;
+    const isRightEdge = x >= width - SNAP_THRESHOLD * 2;
+
+    if (isLeftEdge && isTop) return "topLeft";
+    if (isRightEdge && isTop) return "topRight";
+    if (isLeftEdge && isMiddle) return "left";
+    if (isRightEdge && isMiddle) return "right";
+    if (isLeftEdge && isBottom) return "bottomLeft";
+    if (isRightEdge && isBottom) return "bottomRight";
+
+    return null;
+  };
+
+  const getSnapStyle = (
+    target: SnapTarget,
+    availableWidth: number,
+    fullHeight: number,
+  ): React.CSSProperties => {
+    const width = availableWidth / 2 - PADDING * 0.75;
+    const height = fullHeight / 2 - PADDING * 0.25;
+
+    const common = {
+      width,
+      height,
+    };
+
+    const positions: Record<Exclude<SnapTarget, null>, React.CSSProperties> = {
+      left: { top: 0, left: 0, width, height: fullHeight },
+      right: { top: 0, left: width + PADDING / 2, width, height: fullHeight },
+
+      topLeft: { top: 0, left: 0, ...common },
+      topRight: { top: 0, left: width + PADDING / 2, ...common },
+
+      bottomLeft: { top: height + PADDING * 0.5, left: 0, ...common },
+      bottomRight: { top: height + PADDING * 0.5, left: width + PADDING / 2, ...common },
+    };
+
+    return target ? positions[target] : {};
+  };
+
+  const applySnap = (
+    target: SnapTarget,
+    _sidebarWidth: number,
+    availableWidth: number,
+    fullHeight: number,
+  ) => {
+    const width = availableWidth / 2 - PADDING * 0.75;
+    const height = fullHeight / 2 - PADDING * 0.25;
+
+    const base = {
+      left: { x: 0, width },
+      right: { x: width + PADDING * 0.5, width },
+    } as const;
+
+    const apply = (x: number, y: number, w: number, h: number) => {
+      if (!isSnapped) {
+        setPrevPosition(position);
+        setPrevSize(size);
+      }
+      setPosition({ x, y });
+      setSize({ width: w, height: h });
+      setIsMaximized(false);
+      setIsSnapped(true);
+    };
+
+    const snapMap = {
+      left: () => apply(base.left.x, 0, base.left.width, fullHeight),
+      right: () => apply(base.right.x, 0, base.right.width, fullHeight),
+
+      topLeft: () => apply(base.left.x, 0, base.left.width, height),
+      topRight: () => apply(base.right.x, 0, base.right.width, height),
+
+      bottomLeft: () => apply(base.left.x, height + PADDING * 0.5, base.left.width, height),
+      bottomRight: () => apply(base.right.x, height + PADDING * 0.5, base.right.width, height),
+    };
+
+    snapMap[target]?.();
+  };
 
   const pageDrag = (e: React.PointerEvent) => {
     e.preventDefault();
     const startX = e.clientX - position.x;
     const startY = e.clientY - position.y;
+    const element = e.currentTarget as HTMLElement;
+
+    let didBreakSnap = false;
 
     const handleDragMove = (e: PointerEvent) => {
+      element.style.cursor = "grabbing";
+
+      const deltaX = e.clientX - startX - position.x;
+      const deltaY = e.clientY - startY - position.y;
+      const distance = Math.sqrt(deltaX ** 2 + deltaY ** 2);
+
+      // ✅ 일정 거리 이상 이동하면 snap 해제 + 이전 상태 복원
+      if (isSnapped && !didBreakSnap && distance > DRAG_THRESHOLD) {
+        requestAnimationFrame(() => {
+          setSize(prevSize);
+          setIsSnapped(false);
+        });
+        didBreakSnap = true;
+        return; // 복원 후 즉시 return하여 아래 위치 계산 로직 방지
+      }
+      const currentWidth = isSnapped ? prevSize.width : size.width;
+      const currentHeight = isSnapped ? prevSize.height : size.height;
+
       const newX = Math.max(
         0,
-        Math.min(window.innerWidth - size.width - getSidebarWidth() - PADDING, e.clientX - startX),
+        Math.min(
+          window.innerWidth - currentWidth - getSidebarWidth() - PADDING,
+          e.clientX - startX,
+        ),
       );
       const newY = Math.max(
         0,
-        Math.min(window.innerHeight - size.height - PADDING, e.clientY - startY),
+        Math.min(window.innerHeight - currentHeight - PADDING, e.clientY - startY),
       );
       setPosition({ x: newX, y: newY });
+
+      const sidebarWidth = getSidebarActualWidth();
+      const newSnapTarget = computeSnapTarget(e.clientX, e.clientY, sidebarWidth);
+      if (newSnapTarget) {
+        const availableWidth = window.innerWidth - sidebarWidth;
+        const fullHeight = window.innerHeight - PADDING;
+        const style = getSnapStyle(newSnapTarget, availableWidth, fullHeight);
+        setTarget({ target: newSnapTarget, style });
+      } else {
+        requestAnimationFrame(() => {
+          reset();
+        });
+      }
     };
 
-    const handleDragEnd = () => {
+    const handleDragEnd = (e: PointerEvent) => {
+      element.style.cursor = "default";
+
       document.removeEventListener("pointermove", handleDragMove);
       document.removeEventListener("pointerup", handleDragEnd);
+
+      const sidebarWidth = getSidebarActualWidth();
+      const availableWidth = window.innerWidth - sidebarWidth;
+      const fullHeight = window.innerHeight - PADDING;
+
+      const snapTarget = computeSnapTarget(e.clientX, e.clientY, sidebarWidth);
+
+      if (snapTarget) {
+        applySnap(snapTarget, sidebarWidth, availableWidth, fullHeight);
+      }
+      reset();
     };
 
     document.addEventListener("pointermove", handleDragMove);
@@ -303,6 +459,23 @@ export const usePage = ({ x, y }: Position) => {
       clearTimeout(timeoutId);
     };
   }, [position, size, isSidebarOpen]);
+
+  useEffect(() => {
+    if (!isSnapped) return;
+
+    const sidebarWidth = getSidebarWidth();
+    const availableWidth = window.innerWidth - sidebarWidth;
+
+    const isSnappedRight = position.x !== 0;
+
+    const adjustedWidth = availableWidth / 2 - PADDING * 0.75;
+
+    setSize((prev) => ({ ...prev, width: adjustedWidth }));
+    if (isSnappedRight) {
+      const rightX = adjustedWidth + PADDING * 0.5;
+      setPosition((prev) => ({ ...prev, x: rightX }));
+    }
+  }, [isSidebarOpen]);
 
   return {
     position,

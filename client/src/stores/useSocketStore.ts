@@ -203,7 +203,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
     if (socket) {
       socket.removeAllListeners();
       socket.disconnect();
-      sessionStorage.removeItem("currentWorkspace"); // sessionStorage 삭제
+      localStorage.removeItem("currentWorkspace"); // localStorage 삭제
       set({ socket: null, workspace: null, clientId: 0 });
     }
   },
@@ -217,7 +217,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
       }
       socket.disconnect();
     }
-    sessionStorage.removeItem("currentWorkspace");
+    localStorage.removeItem("currentWorkspace");
     set({ workspace: null }); // 상태도 초기화
     init(userId, workspaceId);
   },
@@ -225,7 +225,7 @@ export const useSocketStore = create<SocketStore>((set, get) => ({
   fetchWorkspaceData: () => get().workspace,
 
   setWorkspace: (workspace: WorkSpaceSerializedProps) => {
-    sessionStorage.setItem("currentWorkspace", JSON.stringify(workspace));
+    localStorage.setItem("currentWorkspace", JSON.stringify(workspace));
     set({ workspace });
   },
 

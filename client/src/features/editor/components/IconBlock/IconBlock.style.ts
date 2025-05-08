@@ -29,6 +29,7 @@ export const iconStyle = cva({
         borderRadius: "2px",
         width: "16px",
         height: "16px",
+        margin: "auto",
         backgroundColor: "white",
       },
     },
