@@ -50,7 +50,7 @@ jobs:
           AI_PROMPT: ${{ secrets.AI_PROMPT }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: docker-compose build backend
+        run: docker-compose up -d --build backend
 
   deploy:
     name: Deploy on Server
@@ -60,13 +60,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Clean client/dist
+        run: rm -rf client/dist
+
       - name: Download client-dist
         uses: actions/download-artifact@v4
         with:
           name: client-dist
           path: client/dist
 
-      - name: Start Services
+      - name: Reload Nginx
         env:
           NODE_ENV: production
           MONGO_URI: ${{ secrets.MONGO_URI }}
@@ -76,7 +79,7 @@ jobs:
           AI_PROMPT: ${{ secrets.AI_PROMPT }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-        run: docker-compose up -d --no-build
+        run: docker-compose up -d --no-build --force-recreate nginx
 
       - name: Cleanup
         run: docker image prune -f
