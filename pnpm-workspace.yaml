@@ -1,4 +1,5 @@
 packages:
   - "@noctaCrdt"
+  - "nocta-doc"
   - "client"
   - "server"

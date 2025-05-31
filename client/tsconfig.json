@@ -31,10 +31,12 @@
       "@apis/*": ["src/apis/*"],
       "@stores/*": ["src/stores/*"],
       "@noctaCrdt": ["../@noctaCrdt/src"],
-      "@noctaCrdt/*": ["../@noctaCrdt/src/*"]
+      "@noctaCrdt/*": ["../@noctaCrdt/src/*"],
+      "@noctaDoc": ["../nocta-doc"],
+      "@noctaDoc/*": ["../nocta-doc/*"]
     }
   },
-  "references": [{ "path": "../@noctaCrdt" }],
+  "references": [{ "path": "../@noctaCrdt" }, { "path": "../nocta-doc" }],
   "include": ["src", "*.ts", "*.tsx", "vite.config.ts", "styled-system"],
   "exclude": ["node_modules"]
 }
