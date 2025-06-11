@@ -25,7 +25,11 @@ jobs:
           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
       - run: pnpm install
-      - run: pnpm --filter client run build
+
+      - name: Build Frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        run: pnpm --filter client run build
 
       - name: Upload client/dist
         uses: actions/upload-artifact@v4
@@ -46,7 +50,6 @@ jobs:
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
           AI_PROMPT: ${{ secrets.AI_PROMPT }}
           AI_API_URL: ${{ secrets.AI_API_URL }}
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
