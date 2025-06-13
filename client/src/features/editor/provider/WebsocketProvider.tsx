@@ -73,6 +73,9 @@ export const WebSocketProvider = ({
             case "update/char":
               handleRemoteCharUpdate(item.operation);
               break;
+            case "checkbox/block":
+              handleRemoteBlockCheckbox(item.operation);
+              break;
             default:
               console.warn("알 수 없는 연산 타입:", item.event);
           }
