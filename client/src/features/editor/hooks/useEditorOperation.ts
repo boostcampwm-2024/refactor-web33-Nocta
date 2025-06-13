@@ -12,7 +12,6 @@ import {
   RemoteBlockCheckboxOperation,
 } from "@noctaCrdt/types/Interfaces";
 import { useCallback } from "react";
-import { useSocketStore } from "@src/stores/useSocketStore";
 import { EditorStateProps } from "../Editor";
 
 interface UseEditorOperationProps {
@@ -41,7 +40,6 @@ export const useEditorOperation = ({
   setEditorState,
   isSameLocalChange,
 }: UseEditorOperationProps) => {
-  const { sendBlockInsertOperation } = useSocketStore();
   const handleRemoteBlockInsert = useCallback(
     (operation: RemoteBlockInsertOperation) => {
       if (operation.pageId !== pageId) return;
@@ -183,18 +181,6 @@ export const useEditorOperation = ({
 
   const handleRemoteCursor = useCallback(() => {}, []);
 
-  const addNewBlock = () => {
-    if (!editorCRDT) return;
-    const index = editorCRDT.current.LinkedList.spread().length;
-    const operation = editorCRDT.current.localInsert(index, "");
-    editorCRDT.current.currentBlock = operation.node;
-    sendBlockInsertOperation({ type: "blockInsert", node: operation.node, pageId });
-    setEditorState({
-      clock: editorCRDT.current.clock,
-      linkedList: editorCRDT.current.LinkedList,
-    });
-  };
-
   return {
     handleRemoteBlockInsert,
     handleRemoteBlockDelete,
@@ -205,6 +191,5 @@ export const useEditorOperation = ({
     handleRemoteCharUpdate,
     handleRemoteCursor,
     handleRemoteBlockCheckbox,
-    addNewBlock,
   };
 };
