@@ -5,7 +5,7 @@ import { EditorStateProps } from "../Editor";
 
 import { useBlockDragAndDrop } from "../hooks/useBlockDragAndDrop";
 
-export interface DndContextProviderProps {
+export interface DndProviderProps {
   children: React.ReactNode;
   editorCRDT: React.MutableRefObject<EditorCRDT>;
   pageId: string;
@@ -16,7 +16,7 @@ export interface DndContextProviderProps {
   setDragBlockList: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
-export const DndContextProvider = ({
+export const DndProvider = ({
   children,
   editorCRDT,
   pageId,
@@ -25,7 +25,7 @@ export const DndContextProvider = ({
   isLocalChange,
   dragBlockList,
   setDragBlockList,
-}: DndContextProviderProps) => {
+}: DndProviderProps) => {
   const { sensors, handleDragEnd, handleDragStart } = useBlockDragAndDrop({
     editorCRDT: editorCRDT.current,
     editorState,

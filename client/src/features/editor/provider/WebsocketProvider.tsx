@@ -3,7 +3,7 @@ import { useRef, MutableRefObject, useEffect } from "react";
 import { RemoteOperationHandlers } from "@src/stores/useSocketStore.ts";
 import { useEditorOperation } from "../hooks/useEditorOperation";
 
-export interface WebsocketContextProviderProps {
+export interface WebSocketProviderProps {
   children: React.ReactNode;
   editorCRDT: MutableRefObject<EditorCRDT>;
   pageId: string;
@@ -12,14 +12,14 @@ export interface WebsocketContextProviderProps {
   subscribeToRemoteOperations: (handlers: RemoteOperationHandlers) => (() => void) | undefined;
 }
 
-export const WebsocketContextProvider = ({
+export const WebSocketProvider = ({
   children,
   editorCRDT,
   pageId,
   setEditorState,
   isSameLocalChange,
   subscribeToRemoteOperations,
-}: WebsocketContextProviderProps) => {
+}: WebSocketProviderProps) => {
   const subscriptionRef = useRef(false);
 
   const {

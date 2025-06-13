@@ -13,8 +13,8 @@ import { useComposition } from "./hooks/useComposition.ts";
 import { useCopyAndPaste } from "./hooks/useCopyAndPaste.ts";
 import { useMarkdownGrammer } from "./hooks/useMarkdownGrammer";
 import { useTextOptionSelect } from "./hooks/useTextOptions.ts";
-import { DndContextProvider } from "./provider/DndContextProvider.tsx";
-import { WebsocketContextProvider } from "./provider/WebsocketContextProvider.tsx";
+import { DndProvider } from "./provider/DndProvider.tsx";
+import { WebSocketProvider } from "./provider/WebsocketProvider.tsx";
 
 export interface EditorStateProps {
   clock: number;
@@ -193,21 +193,21 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
     return <div>Loading editor data...</div>;
   }
   return (
-    <WebsocketContextProvider
-      editorCRDT={editorCRDT}
-      pageId={pageId}
-      setEditorState={setEditorState}
-      isSameLocalChange={isSameLocalChange}
-      subscribeToRemoteOperations={subscribeToRemoteOperations}
-    >
-      <div data-testid={`editor-${testKey}`} className={editorContainer} ref={editorRef}>
-        <div
-          style={{
-            height: virtualizer.getTotalSize(),
-            position: "relative",
-          }}
+    <div data-testid={`editor-${testKey}`} className={editorContainer} ref={editorRef}>
+      <div
+        style={{
+          height: virtualizer.getTotalSize(),
+          position: "relative",
+        }}
+      >
+        <WebSocketProvider
+          editorCRDT={editorCRDT}
+          pageId={pageId}
+          setEditorState={setEditorState}
+          isSameLocalChange={isSameLocalChange}
+          subscribeToRemoteOperations={subscribeToRemoteOperations}
         >
-          <DndContextProvider
+          <DndProvider
             editorCRDT={editorCRDT}
             pageId={pageId}
             editorState={editorState}
@@ -248,7 +248,7 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
                 />
               );
             })}
-          </DndContextProvider>
+          </DndProvider>
           {editorState.linkedList.spread().length === 0 && (
             <div
               data-testid="addNewBlockButton"
@@ -258,9 +258,9 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
               클릭해서 새로운 블록을 추가하세요
             </div>
           )}
-        </div>
+        </WebSocketProvider>
       </div>
-    </WebsocketContextProvider>
+    </div>
   );
 });
 
