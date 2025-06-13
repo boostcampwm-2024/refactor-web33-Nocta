@@ -1,22 +1,20 @@
-import { DndContext, DragEndEvent } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { EditorCRDT } from "@noctaCrdt/Crdt";
 import { BlockLinkedList } from "@noctaCrdt/LinkedList";
-import { Block as CRDTBlock } from "@noctaCrdt/Node";
 import { serializedEditorDataProps } from "@noctaCrdt/types/Interfaces";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useRef, useState, useCallback, useEffect, useMemo, memo } from "react";
+import { useRef, useState, useEffect, useMemo, memo } from "react";
 import { useSocketStore } from "@src/stores/useSocketStore.ts";
-import { setCaretPosition, getAbsoluteCaretPosition } from "@src/utils/caretUtils.ts";
+import { setCaretPosition } from "@src/utils/caretUtils.ts";
 import { editorContainer, addNewBlockButton } from "./Editor.style";
 import { Block } from "./components/block/Block";
-import { useBlockDragAndDrop } from "./hooks/useBlockDragAndDrop";
 import { useBlockOperation } from "./hooks/useBlockOperation.ts";
 import { useBlockOptionSelect } from "./hooks/useBlockOption";
+import { useComposition } from "./hooks/useComposition.ts";
 import { useCopyAndPaste } from "./hooks/useCopyAndPaste.ts";
-import { useEditorOperation } from "./hooks/useEditorOperation.ts";
 import { useMarkdownGrammer } from "./hooks/useMarkdownGrammer";
 import { useTextOptionSelect } from "./hooks/useTextOptions.ts";
+import { DndProvider } from "./provider/DndProvider.tsx";
+import { WebSocketProvider } from "./provider/WebsocketProvider.tsx";
 
 export interface EditorStateProps {
   clock: number;
@@ -35,13 +33,13 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
   const {
     sendCharInsertOperation,
     sendCharDeleteOperation,
-    subscribeToRemoteOperations,
     sendBlockInsertOperation,
     sendBlockDeleteOperation,
     sendBlockUpdateOperation,
     sendBlockCheckboxOperation,
+    subscribeToRemoteOperations,
+    clientId,
   } = useSocketStore();
-  const { clientId } = useSocketStore();
   const [dragBlockList, setDragBlockList] = useState<string[]>([]);
 
   const editorCRDTInstance = useMemo(() => {
@@ -59,33 +57,11 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
   const editorCRDT = useRef<EditorCRDT>(editorCRDTInstance);
   const isLocalChange = useRef(false);
   const isSameLocalChange = useRef(false);
-  const composingCaret = useRef<number | null>(null);
 
   // editorState도 editorCRDT가 변경될 때마다 업데이트
   const [editorState, setEditorState] = useState<EditorStateProps>({
     clock: editorCRDT.current.clock,
     linkedList: editorCRDT.current.LinkedList,
-  });
-
-  const {
-    handleRemoteBlockInsert,
-    handleRemoteBlockDelete,
-    handleRemoteCharInsert,
-    handleRemoteCharDelete,
-    handleRemoteBlockUpdate,
-    handleRemoteBlockReorder,
-    handleRemoteCharUpdate,
-    handleRemoteCursor,
-    handleRemoteBlockCheckbox,
-    addNewBlock,
-  } = useEditorOperation({ editorCRDT, pageId, setEditorState, isSameLocalChange });
-
-  const { sensors, handleDragEnd, handleDragStart } = useBlockDragAndDrop({
-    editorCRDT: editorCRDT.current,
-    editorState,
-    setEditorState,
-    pageId,
-    isLocalChange,
   });
 
   const { handleTypeSelect, handleAnimationSelect, handleCopySelect, handleDeleteSelect } =
@@ -143,103 +119,14 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
     clientId,
   });
 
-  const handleCompositionStart = (e: React.CompositionEvent<HTMLDivElement>, block: CRDTBlock) => {
-    const currentText = e.data;
-    composingCaret.current = getAbsoluteCaretPosition(e.currentTarget);
-    block.crdt.localInsert(composingCaret.current, currentText, block.id, pageId, clientId);
-  };
-
-  const handleCompositionUpdate = (e: React.CompositionEvent<HTMLDivElement>, block: CRDTBlock) => {
-    const currentText = e.data;
-    if (composingCaret.current === null) return;
-    const currentCaret = composingCaret.current;
-    const currentCharNode = block.crdt.LinkedList.findByIndex(currentCaret);
-    if (!currentCharNode) return;
-    currentCharNode.value = currentText;
-  };
-
-  const handleCompositionEnd = useCallback(
-    (e: React.CompositionEvent<HTMLDivElement>, block: CRDTBlock) => {
-      if (!editorCRDT) return;
-      const event = e.nativeEvent as CompositionEvent;
-      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
-
-      if (composingCaret.current === null) return;
-      const currentCaret = composingCaret.current;
-      const currentCharNode = block.crdt.LinkedList.findByIndex(currentCaret);
-      if (!currentCharNode) return;
-
-      if (isMac) {
-        const [character, space] = event.data;
-        if (!character || composingCaret.current === null) return;
-        if (!currentCharNode) return;
-        currentCharNode.value = character;
-        sendCharInsertOperation({
-          type: "charInsert",
-          node: currentCharNode,
-          blockId: block.id,
-          pageId,
-          clientId,
-        });
-        if (space) {
-          const spaceNode = block.crdt.localInsert(
-            currentCaret + 1,
-            space,
-            block.id,
-            pageId,
-            clientId,
-          );
-          sendCharInsertOperation({
-            type: "charInsert",
-            node: spaceNode.node,
-            blockId: block.id,
-            pageId,
-            clientId,
-          });
-        }
-        block.crdt.currentCaret = currentCaret + 2;
-      } else {
-        // Windows의 경우
-        const character = event.data;
-        if (!character) return;
-
-        // 문자열을 개별 문자로 분리
-        const characters = Array.from(character);
-        let currentPosition = currentCaret;
-
-        // 각 문자에 대해 처리
-        characters.forEach((char, index) => {
-          // 현재 위치의 노드 찾기
-          const charNode = block.crdt.LinkedList.findByIndex(currentPosition);
-          if (!charNode) return;
-
-          // 노드 값 설정 및 operation 전송
-          charNode.value = char;
-          sendCharInsertOperation({
-            type: "charInsert",
-            node: charNode,
-            blockId: block.id,
-            pageId,
-            clientId,
-          });
-
-          // 다음 문자를 위한 새 노드 생성 (마지막 문자가 아닌 경우에만)
-          if (index < characters.length - 1) {
-            block.crdt.localInsert(currentPosition + 1, "", block.id, pageId, clientId);
-          }
-
-          currentPosition += 1;
-        });
-
-        block.crdt.currentCaret = currentCaret + characters.length;
-      }
-      isLocalChange.current = false;
-      isSameLocalChange.current = false;
-    },
-    [editorCRDT, pageId, sendCharInsertOperation],
-  );
-
-  const subscriptionRef = useRef(false);
+  const { handleCompositionStart, handleCompositionUpdate, handleCompositionEnd } = useComposition({
+    editorCRDT,
+    pageId,
+    clientId,
+    sendCharInsertOperation,
+    isLocalChange,
+    isSameLocalChange,
+  });
 
   useEffect(() => {
     if (!editorCRDT || !editorCRDT.current.currentBlock) return;
@@ -289,69 +176,17 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
     }
   }, [editorCRDT.current.currentBlock?.id.serialize()]);
 
-  useEffect(() => {
+  const addNewBlock = () => {
     if (!editorCRDT) return;
-    if (subscriptionRef.current) return;
-    subscriptionRef.current = true;
-
-    const unsubscribe = subscribeToRemoteOperations({
-      onRemoteBlockInsert: handleRemoteBlockInsert,
-      onRemoteBlockDelete: handleRemoteBlockDelete,
-      onRemoteCharInsert: handleRemoteCharInsert,
-      onRemoteCharDelete: handleRemoteCharDelete,
-      onRemoteBlockUpdate: handleRemoteBlockUpdate,
-      onRemoteBlockReorder: handleRemoteBlockReorder,
-      onRemoteCharUpdate: handleRemoteCharUpdate,
-      onRemoteCursor: handleRemoteCursor,
-      onRemoteBlockCheckbox: handleRemoteBlockCheckbox,
-      onBatchOperations: (batch) => {
-        for (const item of batch) {
-          switch (item.event) {
-            case "insert/block":
-              handleRemoteBlockInsert(item.operation);
-              break;
-            case "delete/block":
-              handleRemoteBlockDelete(item.operation);
-              break;
-            case "insert/char":
-              handleRemoteCharInsert(item.operation);
-              break;
-            case "delete/char":
-              handleRemoteCharDelete(item.operation);
-              break;
-            case "update/block":
-              handleRemoteBlockUpdate(item.operation);
-              break;
-            case "reorder/block":
-              handleRemoteBlockReorder(item.operation);
-              break;
-            case "update/char":
-              handleRemoteCharUpdate(item.operation);
-              break;
-            default:
-              console.warn("알 수 없는 연산 타입:", item.event);
-          }
-        }
-      },
+    const index = editorCRDT.current.LinkedList.spread().length;
+    const operation = editorCRDT.current.localInsert(index, "");
+    editorCRDT.current.currentBlock = operation.node;
+    sendBlockInsertOperation({ type: "blockInsert", node: operation.node, pageId });
+    setEditorState({
+      clock: editorCRDT.current.clock,
+      linkedList: editorCRDT.current.LinkedList,
     });
-
-    return () => {
-      subscriptionRef.current = false;
-      unsubscribe?.();
-    };
-  }, [
-    editorCRDT,
-    subscribeToRemoteOperations,
-    pageId,
-    handleRemoteBlockInsert,
-    handleRemoteBlockDelete,
-    handleRemoteCharInsert,
-    handleRemoteCharDelete,
-    handleRemoteBlockUpdate,
-    handleRemoteBlockReorder,
-    handleRemoteCharUpdate,
-    handleRemoteCursor,
-  ]);
+  };
 
   // 로딩 상태 체크
   if (!editorCRDT || !editorState) {
@@ -365,20 +200,21 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
           position: "relative",
         }}
       >
-        <DndContext
-          onDragEnd={(event: DragEndEvent) => {
-            handleDragEnd(event, dragBlockList, () => setDragBlockList([]));
-          }}
-          onDragStart={(event) => {
-            handleDragStart(event, setDragBlockList);
-          }}
-          sensors={sensors}
+        <WebSocketProvider
+          editorCRDT={editorCRDT}
+          pageId={pageId}
+          setEditorState={setEditorState}
+          isSameLocalChange={isSameLocalChange}
+          subscribeToRemoteOperations={subscribeToRemoteOperations}
         >
-          <SortableContext
-            items={editorState.linkedList
-              .spread()
-              .map((block) => `${block.id.client}-${block.id.clock}`)}
-            strategy={verticalListSortingStrategy}
+          <DndProvider
+            editorCRDT={editorCRDT}
+            pageId={pageId}
+            editorState={editorState}
+            setEditorState={setEditorState}
+            isLocalChange={isLocalChange}
+            dragBlockList={dragBlockList}
+            setDragBlockList={setDragBlockList}
           >
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const block = editorState.linkedList.spread()[virtualRow.index];
@@ -412,13 +248,17 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
                 />
               );
             })}
-          </SortableContext>
-        </DndContext>
-        {editorState.linkedList.spread().length === 0 && (
-          <div data-testid="addNewBlockButton" className={addNewBlockButton} onClick={addNewBlock}>
-            클릭해서 새로운 블록을 추가하세요
-          </div>
-        )}
+          </DndProvider>
+          {editorState.linkedList.spread().length === 0 && (
+            <div
+              data-testid="addNewBlockButton"
+              className={addNewBlockButton}
+              onClick={addNewBlock}
+            >
+              클릭해서 새로운 블록을 추가하세요
+            </div>
+          )}
+        </WebSocketProvider>
       </div>
     </div>
   );

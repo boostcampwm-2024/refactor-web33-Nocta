@@ -83,7 +83,7 @@ interface SocketStore {
   getSocketId: () => string | null;
 }
 
-interface RemoteOperationHandlers {
+export interface RemoteOperationHandlers {
   onRemoteBlockUpdate: (operation: RemoteBlockUpdateOperation) => void;
   onRemoteBlockInsert: (operation: RemoteBlockInsertOperation) => void;
   onRemoteBlockDelete: (operation: RemoteBlockDeleteOperation) => void;
