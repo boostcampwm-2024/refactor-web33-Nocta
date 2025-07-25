@@ -56,4 +56,15 @@ export class NoctaDoc {
     const block = this.blockCRDT.getBlock(blockId);
     return block.charCRDT.getText();
   }
+
+  hasBlock(blockId: string): boolean {
+    return this.blockCRDT.hasBlock(blockId);
+  }
+
+  getTextSafe(blockId: string): string {
+    if (!this.hasBlock(blockId)) {
+      return "";
+    }
+    return this.getText(blockId);
+  }
 }
