@@ -10,6 +10,7 @@ import { useSocketStore } from "@src/stores/useSocketStore.ts";
 import { setCaretPosition, getAbsoluteCaretPosition } from "@src/utils/caretUtils.ts";
 import { editorContainer, addNewBlockButton } from "./Editor.style";
 import { Block } from "./components/block/Block";
+import { useMarkdownGrammer2 } from "./hooks/markdowngrammer/index.ts";
 import { useBlockDragAndDrop } from "./hooks/useBlockDragAndDrop";
 import { useBlockOperation } from "./hooks/useBlockOperation.ts";
 import { useBlockOptionSelect } from "./hooks/useBlockOption";
@@ -101,9 +102,20 @@ export const Editor = memo(({ testKey, pageId, serializedEditorData }: EditorPro
       sendCharInsertOperation,
     });
 
-  const { handleKeyDown: onKeyDown, handleInput: handleHrInput } = useMarkdownGrammer({
+  // const { handleKeyDown: onKeyDown, handleInput: handleHrInput } = useMarkdownGrammer({
+  //   editorCRDT: editorCRDT.current,
+  //   editorState,
+  //   setEditorState,
+  //   pageId,
+  //   clientId,
+  //   sendBlockInsertOperation,
+  //   sendBlockDeleteOperation,
+  //   sendBlockUpdateOperation,
+  //   sendCharDeleteOperation,
+  //   sendCharInsertOperation,
+  // });
+  const { handleKeyDown: onKeyDown, handleInput: handleHrInput } = useMarkdownGrammer2({
     editorCRDT: editorCRDT.current,
-    editorState,
     setEditorState,
     pageId,
     clientId,
