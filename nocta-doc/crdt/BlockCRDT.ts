@@ -86,6 +86,10 @@ export class BlockCRDT {
     return block;
   }
 
+  hasBlock(blockId: string): boolean {
+    return this.blocks.has(blockId);
+  }
+
   collectOperations(): Operation[] {
     const ops: Operation[] = [];
     let currentId = this.headId;
