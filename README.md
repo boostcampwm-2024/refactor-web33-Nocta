@@ -11,11 +11,7 @@
 
 </div>
 
-<div align="center">
 
-<a href="https://nocta.site" title="🌌 밤하늘의 별빛처럼, 자유로운 인터랙션 실시간 에디터"><strong>배포 사이트</strong></a>
-
-</div>
 
 # 📑 문서 작성이 더 편하고 즐거워진다
 
